@@ -1,0 +1,9 @@
+jupyter
+tqdm 
+torch
+requests
+numpy 
+pandas 
+matplotlib 
+pandas_summary 
+feather-format 
