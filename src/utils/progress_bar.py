@@ -1,4 +1,4 @@
-from tqdm import tqdm_notebook as tqdm
+from tqdm import tqdm, tqdm_notebook
 
 
 class ProgressBar:
@@ -6,10 +6,11 @@ class ProgressBar:
     Pretty progress bar for training
     """
 
-    def __init__(self, epoch, total_epochs, data_loader):
+    def __init__(self, epoch, total_epochs, data_loader, is_notebook=False):
         self.epoch = epoch
         self.total_epochs = total_epochs
         self.loss = 0
+        _tqdm = tqdm_notebook if is_notebook else tqdm
         self.progress = tqdm(
             iterable=iter(data_loader),
             leave=False,

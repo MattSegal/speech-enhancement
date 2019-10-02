@@ -13,16 +13,20 @@ for file in $FILES; do
 done
 popd
 
+# Clean up inflated data
+echo -e "\nCleaning up old inflated data...\n"
+rm -rf data/inflated
+
 echo -e "\nInflating compressed data...\n"
-mkdir -p data/original
-pushd data/original
-echo -e "\nInflating training_set_clean...\n"
+mkdir -p data/inflated
+pushd data/inflated
+echo "Inflating training_set_clean..."
 unzip -q -j ../compressed/clean_trainset_28spk_wav.zip -d training_set_clean
-echo -e "\nInflating training_set_noisy...\n"
+echo "Inflating training_set_noisy..."
 unzip -q -j ../compressed/noisy_trainset_28spk_wav.zip -d training_set_noisy
-echo -e "\nInflating validation_set_clean...\n"
+echo "Inflating validation_set_clean..."
 unzip -q -j ../compressed/clean_testset_wav.zip -d validation_set_clean
-echo -e "\nInflating validation_set_noisy...\n"
+echo "Inflating validation_set_noisy..."
 unzip -q -j ../compressed/noisy_testset_wav.zip -d validation_set_noisy
 popd
 
@@ -32,7 +36,7 @@ pushd data/
 for dataset in $DATASETS; do
     echo "Processing $dataset ..."
     mkdir -p "$dataset"
-    pushd "original/$dataset"
+    pushd "inflated/$dataset"
     for file in *.wav; do
         sox "$file" -e float -b 32 "../../${dataset}/${file}" rate -v -I 16000
     done
@@ -40,8 +44,5 @@ for dataset in $DATASETS; do
 done
 popd
 
-# Clean up original data
-echo -e "\nCleaning up original data...\n"
-rm -rf data/original
 
 echo -e "\nDone\n"
