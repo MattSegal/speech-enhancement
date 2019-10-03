@@ -16,11 +16,15 @@ class SceneDataset(Dataset):
     """
 
     def __init__(self, train):
+        """
+        Load the dataset into memory so it can be used for training.
+        """
         dataset_label = "training" if train else "validation"
         print(f"Loading {dataset_label} dataset into memory.")
         data_folder = os.path.join(DATA_PATH, f"scenes_{dataset_label}_set")
 
-        print("Loading metadata...")
+        # Load class labels from a text file.
+        print("Loading class labels...")
         meta_path = os.path.join(data_folder, "meta.txt")
         with open(meta_path, "r") as f:
             meta_text = f.read()
@@ -30,7 +34,8 @@ class SceneDataset(Dataset):
         for line in meta_text.split("\n"):
             if line:
                 filename, label = line.split("\t")
-                label_lookup[filename] = label
+                filename_cleaned = filename.replace("audio/", "")
+                label_lookup[filename_cleaned] = label
                 self.labels.add(label)
 
         self.idx_to_label = {}
@@ -39,6 +44,7 @@ class SceneDataset(Dataset):
             self.idx_to_label[idx] = label
             self.label_to_idx[label] = idx
 
+        # Load audio data from .wav files, associate each file with its label.
         print("Loading data...")
         self.data = []
         self.data_labels = []
@@ -49,25 +55,30 @@ class SceneDataset(Dataset):
         ]
 
         # HACK - ONLY USE 1 FILE
-        wav_files = wav_files[:1]
+        # wav_files = wav_files[:1]
 
         for filename in tqdm(wav_files):
             path = os.path.join(data_folder, filename)
             sample_rate, wav_arr = wavfile.read(path)
+            # In paper the audio files are stereo, and they are split into two mono files.
+            # Here we combine them into one file instead.
             assert len(wav_arr.shape) == 2, "Audio data should be stereo"
             assert sample_rate == 16000
             wav_arr = wav_arr.sum(axis=1) / 2
             assert len(wav_arr.shape) == 1, "Audio data should now be mono"
-            self.data.append(torch.tensor(wav_arr))
+
             try:
                 label = label_lookup[filename]
             except KeyError:
+                print(f"Failed to load {filename}")
                 continue
 
             label_idx = self.label_to_idx[label]
+            self.data.append(torch.tensor(wav_arr))
             self.data_labels.append(label_idx)
 
-        print("Done loading dataset into memory.")
+        assert len(self.data) == len(self.data_labels)
+        print(f"Done loading dataset into memory: loaded {len(self.data)} items.")
 
     def __len__(self):
         """
@@ -84,4 +95,4 @@ class SceneDataset(Dataset):
         """
         input_t = self.data[idx]
         label_idx = self.data_labels[idx]
-        return input_t, label_idx
+        return input_t, torch.tensor([label_idx])
