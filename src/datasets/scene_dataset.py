@@ -1,11 +1,13 @@
 import os
 
+import numpy as np
 import torch
 from tqdm import tqdm
 from torch.utils.data import Dataset
 from scipy.io import wavfile
 
 DATA_PATH = "data/"
+CHUNK_SIZE = 2 ** 15 - 1
 
 
 class SceneDataset(Dataset):
@@ -54,28 +56,31 @@ class SceneDataset(Dataset):
             if filename.endswith(".wav")
         ]
 
-        # HACK - ONLY USE 1 FILE
-        # wav_files = wav_files[:1]
+        # HACK - ONLY USE A SUBSET OF FILES
+        wav_files = wav_files[:100]
 
         for filename in tqdm(wav_files):
+            # Get the label for this file
+            label = label_lookup[filename]
+            label_idx = self.label_to_idx[label]
+            # Read the audio file into memory
             path = os.path.join(data_folder, filename)
             sample_rate, wav_arr = wavfile.read(path)
-            # In paper the audio files are stereo, and they are split into two mono files.
-            # Here we combine them into one file instead.
-            assert len(wav_arr.shape) == 2, "Audio data should be stereo"
             assert sample_rate == 16000
-            wav_arr = wav_arr.sum(axis=1) / 2
-            assert len(wav_arr.shape) == 1, "Audio data should now be mono"
+            # The audio files are stereo: split them into two mono files.
+            assert len(wav_arr.shape) == 2, "Audio data should be stereo"
+            wav_arr = wav_arr.transpose()
+            mono_wav_arrs = (wav_arr[0], wav_arr[1])
 
-            try:
-                label = label_lookup[filename]
-            except KeyError:
-                print(f"Failed to load {filename}")
-                continue
-
-            label_idx = self.label_to_idx[label]
-            self.data.append(torch.tensor(wav_arr))
-            self.data_labels.append(label_idx)
+            # Split each file up into non-overlapping chunks
+            for wav_arr in mono_wav_arrs:
+                even_length = len(wav_arr) - len(wav_arr) % CHUNK_SIZE
+                num_chunks = even_length / CHUNK_SIZE
+                chunks = np.split(wav_arr[:even_length], num_chunks)
+                for chunk in chunks:
+                    # Add each chunk to the dataset
+                    self.data.append(torch.tensor(chunk))
+                    self.data_labels.append(label_idx)
 
         assert len(self.data) == len(self.data_labels)
         print(f"Done loading dataset into memory: loaded {len(self.data)} items.")
@@ -95,4 +100,4 @@ class SceneDataset(Dataset):
         """
         input_t = self.data[idx]
         label_idx = self.data_labels[idx]
-        return input_t, torch.tensor([label_idx])
+        return input_t, label_idx

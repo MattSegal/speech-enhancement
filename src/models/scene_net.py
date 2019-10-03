@@ -22,9 +22,7 @@ class SceneNet(nn.Module):
         self.conv_10 = ConvLayer(in_channels=64, out_channels=128, stride=2)
         self.conv_11 = ConvLayer(in_channels=128, out_channels=128, stride=2)
         self.conv_12 = ConvLayer(in_channels=128, out_channels=128, stride=2)
-        self.conv_13 = ConvLayer(in_channels=128, out_channels=128, stride=2)
-        self.conv_14 = ConvLayer(in_channels=128, out_channels=128, stride=2)
-        self.conv_15 = ConvLayer(in_channels=128, out_channels=128, stride=1)
+        self.conv_13 = ConvLayer(in_channels=128, out_channels=128, stride=1)
         self.linear = nn.Conv1d(
             in_channels=128,
             out_channels=num_labels,
@@ -32,7 +30,7 @@ class SceneNet(nn.Module):
             stride=1,
             padding=0,
         )
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input_t):
         """
@@ -45,37 +43,33 @@ class SceneNet(nn.Module):
 
         # Pass input through a series of 1D covolutions
         # (batch_size, channels, length)
-        # torch.Size([1, 1, 480000])
+        # torch.Size([1, 1, 32767])
         conv_acts = self.conv_1(input_t)
-        # torch.Size([1, 32, 239999])
+        # torch.Size([1, 32, 16383])
         conv_acts = self.conv_2(conv_acts)
-        # torch.Size([1, 32, 119999])
+        # torch.Size([1, 32, 8191])
         conv_acts = self.conv_3(conv_acts)
-        # torch.Size([1, 32, 59999])
+        # torch.Size([1, 32, 4095])
         conv_acts = self.conv_4(conv_acts)
-        # torch.Size([1, 32, 29999])
+        # torch.Size([1, 32, 2047])
         conv_acts = self.conv_5(conv_acts)
-        # torch.Size([1, 32, 14999])
+        # torch.Size([1, 32, 1023])
         conv_acts = self.conv_6(conv_acts)
-        # torch.Size([1, 64, 7499])
+        # torch.Size([1, 64, 511])
         conv_acts = self.conv_7(conv_acts)
-        # torch.Size([1, 64, 3749])
+        # torch.Size([1, 64, 255])
         conv_acts = self.conv_8(conv_acts)
-        # torch.Size([1, 64, 1874])
+        # torch.Size([1, 64, 127])
         conv_acts = self.conv_9(conv_acts)
-        # torch.Size([1, 64, 936])
+        # torch.Size([1, 64, 63])
         conv_acts = self.conv_10(conv_acts)
-        # torch.Size([1, 128, 467])
+        # torch.Size([1, 128, 31])
         conv_acts = self.conv_11(conv_acts)
-        # torch.Size([1, 128, 233])
+        # torch.Size([1, 128, 15])
         conv_acts = self.conv_12(conv_acts)
-        # torch.Size([1, 128, 116])
+        # torch.Size([1, 128, 7])
         conv_acts = self.conv_13(conv_acts)
-        # torch.Size([1, 128, 57])
-        conv_acts = self.conv_14(conv_acts)
-        # torch.Size([1, 128, 28])
-        conv_acts = self.conv_15(conv_acts)
-        # torch.Size([1, 128, 26])
+        # torch.Size([1, 128, 5])
 
         # Perform average pooling over features to produce a standard 1D feature vector.
         pooled_acts = torch.mean(conv_acts, dim=2, keepdim=True)

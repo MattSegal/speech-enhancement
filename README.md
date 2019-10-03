@@ -4,15 +4,18 @@ Try to replicate Speech Denoising with Deep Feature Losses ([arXiv](https://arxi
 
 TODO
 
+- look into weights and biases online
+- look into Double-DIP algorithm
 - try out sacred https://sacred.readthedocs.io/en/stable/experiment.html
 
 ### Getting started
 
 ```bash
 sudo apt-get install sox
-./scripts/setup-gpu.sh
 ./scripts/setup-python.sh
-jupyter notebook
+./scripts/setup-gpu.sh
+. env/bin/activate
+python3 run.py
 ```
 
 ### Datasets
