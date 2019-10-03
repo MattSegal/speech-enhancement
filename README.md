@@ -2,11 +2,14 @@
 
 Try to replicate Speech Denoising with Deep Feature Losses ([arXiv](https://arxiv.org/abs/1806.10522), [sound examples](https://ccrma.stanford.edu/~francois/SpeechDenoisingWithDeepFeatureLosses/))
 
-TODO
+## TODO
 
-- look into weights and biases online
 - look into Double-DIP algorithm
-- try out sacred https://sacred.readthedocs.io/en/stable/experiment.html
+
+## Ideas
+
+- If this architecture is inspired by VGG, then perhaps resnet is a better, more modern architecture (https://arxiv.org/pdf/1512.03385.pdf)
+- use human voice domain dataset for acoustic scene classifier
 
 ### Getting started
 

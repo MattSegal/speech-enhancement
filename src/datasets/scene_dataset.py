@@ -7,7 +7,9 @@ from torch.utils.data import Dataset
 from scipy.io import wavfile
 
 DATA_PATH = "data/"
-CHUNK_SIZE = 2 ** 15 - 1
+NUM_CONV_LAYERS = 14
+MIN_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 1) - 1
+MAX_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 2) - 1
 
 
 class SceneDataset(Dataset):
@@ -21,8 +23,11 @@ class SceneDataset(Dataset):
         """
         Load the dataset into memory so it can be used for training.
         """
+        self.train = train
+        self.min_chunk_size = MIN_CHUNK_SIZE
+        self.max_chunk_size = MAX_CHUNK_SIZE
         dataset_label = "training" if train else "validation"
-        print(f"Loading {dataset_label} dataset into memory.")
+        print(f"\nLoading {dataset_label} dataset into memory.")
         data_folder = os.path.join(DATA_PATH, f"scenes_{dataset_label}_set")
 
         # Load class labels from a text file.
@@ -57,7 +62,7 @@ class SceneDataset(Dataset):
         ]
 
         # HACK - ONLY USE A SUBSET OF FILES
-        wav_files = wav_files[:100]
+        # wav_files = wav_files[:300]
 
         for filename in tqdm(wav_files):
             # Get the label for this file
@@ -74,16 +79,15 @@ class SceneDataset(Dataset):
 
             # Split each file up into non-overlapping chunks
             for wav_arr in mono_wav_arrs:
-                even_length = len(wav_arr) - len(wav_arr) % CHUNK_SIZE
-                num_chunks = even_length / CHUNK_SIZE
-                chunks = np.split(wav_arr[:even_length], num_chunks)
-                for chunk in chunks:
-                    # Add each chunk to the dataset
-                    self.data.append(torch.tensor(chunk))
-                    self.data_labels.append(label_idx)
+                # Add each audio segment to the dataset
+                self.data.append(wav_arr)
+                self.data_labels.append(label_idx)
+                # Update max chunk length so it's the length of the shortest file
+                # if self.max_chunk_size > wav_arr.size:
+                #     self.max_chunk_size = wav_arr.size
 
         assert len(self.data) == len(self.data_labels)
-        print(f"Done loading dataset into memory: loaded {len(self.data)} items.")
+        print(f"Done loading dataset into memory: loaded {len(self.data)} items.\n")
 
     def __len__(self):
         """
@@ -98,6 +102,22 @@ class SceneDataset(Dataset):
             input:
             label: 
         """
-        input_t = self.data[idx]
+        input_arr = self.data[idx]
         label_idx = self.data_labels[idx]
-        return input_t, label_idx
+        if self.train:
+            # Randomly sample length of audio then pad it with zeros, so that it's always
+            # the same size as all other samples (required for mini-batching)
+            # Determine chunk width
+            random_exponent = np.random.uniform(
+                np.log10(self.min_chunk_size - 0.5),
+                np.log10(self.max_chunk_size + 0.5),
+            )
+            chunk_width = int(np.round(10.0 ** random_exponent))
+            chunk_start = np.random.randint(0, np.size(input_arr) - chunk_width + 1)
+            # Extract chunk from input
+            input_arr = input_arr[chunk_start : chunk_start + chunk_width]
+            # Pad the chunk with zeros to be a uniform length.
+            padding = self.max_chunk_size - input_arr.size
+            input_arr = np.pad(input_arr, (0, padding))
+
+        return torch.tensor(input_arr), label_idx

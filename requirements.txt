@@ -9,3 +9,4 @@ pandas_summary
 feather-format 
 black
 scipy
+wandb

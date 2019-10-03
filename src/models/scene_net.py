@@ -1,14 +1,17 @@
 import torch
 import torch.nn as nn
 
+MIN_SAMPLES = 32767
+
 
 class SceneNet(nn.Module):
     """
     Convolutional network used to classify acoustic scenes.
     """
 
-    def __init__(self, num_labels):
+    def __init__(self, num_labels, is_train=True):
         super().__init__()
+        self.is_train = is_train
         self.num_labels = num_labels
         self.conv_1 = ConvLayer(in_channels=1, out_channels=32, stride=2)
         self.conv_2 = ConvLayer(in_channels=32, out_channels=32, stride=2)
@@ -22,14 +25,11 @@ class SceneNet(nn.Module):
         self.conv_10 = ConvLayer(in_channels=64, out_channels=128, stride=2)
         self.conv_11 = ConvLayer(in_channels=128, out_channels=128, stride=2)
         self.conv_12 = ConvLayer(in_channels=128, out_channels=128, stride=2)
-        self.conv_13 = ConvLayer(in_channels=128, out_channels=128, stride=1)
-        self.linear = nn.Conv1d(
-            in_channels=128,
-            out_channels=num_labels,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-        )
+        self.conv_13 = ConvLayer(in_channels=128, out_channels=128, stride=2)
+        self.conv_14 = ConvLayer(in_channels=128, out_channels=128, stride=2)
+        self.conv_15 = ConvLayer(in_channels=128, out_channels=128, stride=1)
+        self.linear = nn.Linear(in_features=128, out_features=num_labels, bias=True)
+        self.dropout = nn.Dropout(p=0.5)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input_t):
@@ -40,46 +40,54 @@ class SceneNet(nn.Module):
         # Convolutional filter expects a 3D input
         assert len(input_t.shape) == 3  # batch_size, channels, audio
         assert input_t.shape[1] == 1  # only 1 channel initially
+        assert input_t.shape[2] >= MIN_SAMPLES  # Receptive field minimum
 
         # Pass input through a series of 1D covolutions
         # (batch_size, channels, length)
         # torch.Size([1, 1, 32767])
         conv_acts = self.conv_1(input_t)
-        # torch.Size([1, 32, 16383])
+        # torch.Size([1, 32, 16384])
         conv_acts = self.conv_2(conv_acts)
-        # torch.Size([1, 32, 8191])
+        # torch.Size([1, 32, 8192])
         conv_acts = self.conv_3(conv_acts)
-        # torch.Size([1, 32, 4095])
+        # torch.Size([1, 32, 4096])
         conv_acts = self.conv_4(conv_acts)
-        # torch.Size([1, 32, 2047])
+        # torch.Size([1, 32, 2048])
         conv_acts = self.conv_5(conv_acts)
-        # torch.Size([1, 32, 1023])
+        # torch.Size([1, 32, 1024])
         conv_acts = self.conv_6(conv_acts)
-        # torch.Size([1, 64, 511])
+        # torch.Size([1, 64, 512])
         conv_acts = self.conv_7(conv_acts)
-        # torch.Size([1, 64, 255])
+        # torch.Size([1, 64, 256])
         conv_acts = self.conv_8(conv_acts)
-        # torch.Size([1, 64, 127])
+        # torch.Size([1, 64, 128])
         conv_acts = self.conv_9(conv_acts)
-        # torch.Size([1, 64, 63])
+        # torch.Size([1, 64, 64])
         conv_acts = self.conv_10(conv_acts)
-        # torch.Size([1, 128, 31])
+        # torch.Size([1, 128, 32])
         conv_acts = self.conv_11(conv_acts)
-        # torch.Size([1, 128, 15])
+        # torch.Size([1, 128, 16])
         conv_acts = self.conv_12(conv_acts)
-        # torch.Size([1, 128, 7])
+        # torch.Size([1, 128, 8])
         conv_acts = self.conv_13(conv_acts)
-        # torch.Size([1, 128, 5])
+        # torch.Size([1, 128, 4])
+        conv_acts = self.conv_14(conv_acts)
+        # torch.Size([1, 128, 2])
+        conv_acts = self.conv_15(conv_acts)
+        # torch.Size([1, 128, 2])
 
         # Perform average pooling over features to produce a standard 1D feature vector.
-        pooled_acts = torch.mean(conv_acts, dim=2, keepdim=True)
-        # (batch_size, channels)
-        # torch.Size([1, 128])
+        pooled_acts = torch.mean(conv_acts, dim=2)
+        # (batch_size,)
+        # torch.Size([128])
 
-        # # Run 1x1 convolutional filter over pooled features
+        # # Run linear layer over pooled features
         linear_acts = self.linear(pooled_acts)
+        # Fight overfitting during training with dropout.
+        if self.is_train:
+            linear_acts = self.dropout(linear_acts)
         # (batch_size, num_labels, 1)
-        # torch.Size([1, 15, 1])
+        # torch.Size([1, 15])
 
         # # Run softmax over activations to produce the final probability distribution
         prediciton_acts = linear_acts.view(batch_size, self.num_labels)
@@ -96,10 +104,6 @@ class ConvLayer(nn.Module):
     Single convolutional unit for the acoustic classifier network.
         Input tensor: (batch_size, in_channels, height, width)
         Output tensor: (batch_size, out_channels, height, width)
-
-    TODO - add Xavier or Kaiming initialization
-    https://towardsdatascience.com/weight-initialization-in-neural-networks-a-journey-from-the-basics-to-kaiming-954fb9b47c79
-
     """
 
     def __init__(self, in_channels, out_channels, stride):
@@ -110,16 +114,19 @@ class ConvLayer(nn.Module):
 
         """
         super().__init__()
+        # Configure padding so the input and output sizes are the same.
+
         self.conv = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
             stride=stride,
             kernel_size=3,
-            padding=0,  # Input size should be the same as output size?
-            # FIXME - no padding - do not understand why it is used
+            padding=1,
         )
         self.lrelu = nn.LeakyReLU(negative_slope=0.2)
         self.batch_norm = nn.BatchNorm1d(num_features=out_channels)
+        # Apply Kaiming initialization to convolutional weights
+        nn.init.kaiming_normal_(self.conv.weight)
 
     def forward(self, input_t):
         """

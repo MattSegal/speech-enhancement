@@ -3,3 +3,5 @@ env/
 data/
 *.pyc
 __pycache__/
+wandb.sh
+wandb/
