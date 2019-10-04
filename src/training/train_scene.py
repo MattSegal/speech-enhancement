@@ -129,9 +129,13 @@ for epoch in range(NUM_EPOCHS):
         )
 
 # Save model to disk
-checkpoint_filename = f"scene-net-{int(time.time())}.ckpt"
+if USE_WANDB:
+    checkpoint_filename = f"scene-net-{WANDB_NAME}-{int(time.time())}.ckpt"
+else:
+    checkpoint_filename = f"scene-net-{int(time.time())}.ckpt"
 checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
 torch.save(net.state_dict(), checkpoint_path)
+
 # Upload model to wandb
 if USE_WANDB:
     wandb.save(checkpoint_path)

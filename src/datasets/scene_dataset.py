@@ -1,4 +1,5 @@
 import os
+import random
 
 import numpy as np
 import torch
@@ -8,6 +9,7 @@ from scipy.io import wavfile
 
 DATA_PATH = "data/"
 NUM_CONV_LAYERS = 14
+CHUNK_SIZE = 32767
 MIN_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 1) - 1
 MAX_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 2) - 1
 SUB_SAMPLE = False
@@ -78,6 +80,7 @@ class SceneDataset(Dataset):
                 # Add each audio segment to the dataset
                 chunks = split_even_chunks(wav_arr)
                 for chunk in chunks:
+                    # normalized_chunk = normalize_audio(chunk)
                     self.data.append(chunk)
                     self.data_labels.append(label_idx)
 
@@ -92,18 +95,34 @@ class SceneDataset(Dataset):
         """
         How many samples there are in the dataset.
         """
-        return len(self.data)  # Untrue?
+        return len(self.data)
 
     def __getitem__(self, idx):
         """
         Get item by integer index,
         returns input_t, label_idx
-            input:
-            label: 
+            input: (CHUNK_SIZE, )
+            label: integer
         """
         input_arr = self.data[idx]
         label_idx = self.data_labels[idx]
         return torch.tensor(input_arr), label_idx
+
+
+def normalize_audio(input_arr):
+    """
+    Normalize audio so each file is bound between +/- 1
+    """
+    signal_range = input_arr.max() - input_arr.min()
+    return (2 * (input_arr - input_arr.min()) - 1) / signal_range
+
+
+def add_noise(input_arr):
+    """
+    Add random noise for training-time data augmentation
+    """
+    noise = np.random.randn(len(input_arr)) / 100
+    return input_arr + noise.astype("float32")
 
 
 def sample_random_chunk(input_arr):
@@ -127,10 +146,14 @@ def sample_random_chunk(input_arr):
 
 def split_even_chunks(input_arr):
     """
-    Split the audio sample into multiple even chunks
+    Split the audio sample into multiple even chunks,
+    with a random offset.
     """
-    even_length = len(input_arr) - len(input_arr) % MIN_CHUNK_SIZE
-    num_chunks = even_length / MIN_CHUNK_SIZE
-    chunks = np.split(input_arr[:even_length], num_chunks)
+    even_length = len(input_arr) - len(input_arr) % CHUNK_SIZE
+    remainder_length = len(input_arr) - even_length
+    offset = np.random.randint(0, remainder_length + 1)
+    num_chunks = even_length / CHUNK_SIZE
+    start = offset
+    end = offset + even_length
+    chunks = np.split(input_arr[start:end], num_chunks)
     return chunks
-
