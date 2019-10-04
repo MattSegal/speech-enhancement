@@ -4,12 +4,14 @@ Try to replicate Speech Denoising with Deep Feature Losses ([arXiv](https://arxi
 
 ## TODO
 
-- look into Double-DIP algorithm
+- Look into raw audio tips
+- Try train a resnet / VGG on images to sanity check architecture
+- Try to reproduce an image denoising algo
 
 ## Ideas
 
-- If this architecture is inspired by VGG, then perhaps resnet is a better, more modern architecture (https://arxiv.org/pdf/1512.03385.pdf)
 - use human voice domain dataset for acoustic scene classifier
+- look into Double-DIP algorithm for further ideas on denoising
 
 ### Getting started
 
@@ -26,6 +28,7 @@ python3 run.py
 The Univeristy of Edinburgh [Noisy speech database](https://datashare.is.ed.ac.uk/handle/10283/2791)
 
 The TUT Acoustic scenes 2016 [dataset](https://zenodo.org/record/45739) is used to train the scene classifier network, which is used for the loss function.
+http://www.cs.tut.fi/~mesaros/pubs/mesaros_eusipco2016-dcase.pdf
 
 The CHiME-Home (Computational Hearing in Multisource Environments) [dataset](https://archive.org/details/chime-home) (2015)
 

@@ -10,6 +10,7 @@ DATA_PATH = "data/"
 NUM_CONV_LAYERS = 14
 MIN_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 1) - 1
 MAX_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 2) - 1
+SUB_SAMPLE = False
 
 
 class SceneDataset(Dataset):
@@ -24,8 +25,6 @@ class SceneDataset(Dataset):
         Load the dataset into memory so it can be used for training.
         """
         self.train = train
-        self.min_chunk_size = MIN_CHUNK_SIZE
-        self.max_chunk_size = MAX_CHUNK_SIZE
         dataset_label = "training" if train else "validation"
         print(f"\nLoading {dataset_label} dataset into memory.")
         data_folder = os.path.join(DATA_PATH, f"scenes_{dataset_label}_set")
@@ -61,9 +60,6 @@ class SceneDataset(Dataset):
             if filename.endswith(".wav")
         ]
 
-        # HACK - ONLY USE A SUBSET OF FILES
-        # wav_files = wav_files[:300]
-
         for filename in tqdm(wav_files):
             # Get the label for this file
             label = label_lookup[filename]
@@ -80,11 +76,14 @@ class SceneDataset(Dataset):
             # Split each file up into non-overlapping chunks
             for wav_arr in mono_wav_arrs:
                 # Add each audio segment to the dataset
-                self.data.append(wav_arr)
-                self.data_labels.append(label_idx)
-                # Update max chunk length so it's the length of the shortest file
-                # if self.max_chunk_size > wav_arr.size:
-                #     self.max_chunk_size = wav_arr.size
+                chunks = split_even_chunks(wav_arr)
+                for chunk in chunks:
+                    self.data.append(chunk)
+                    self.data_labels.append(label_idx)
+
+        if SUB_SAMPLE:
+            self.data = self.data[:SUB_SAMPLE]
+            self.data_labels = self.data_labels[:SUB_SAMPLE]
 
         assert len(self.data) == len(self.data_labels)
         print(f"Done loading dataset into memory: loaded {len(self.data)} items.\n")
@@ -104,20 +103,34 @@ class SceneDataset(Dataset):
         """
         input_arr = self.data[idx]
         label_idx = self.data_labels[idx]
-        if self.train:
-            # Randomly sample length of audio then pad it with zeros, so that it's always
-            # the same size as all other samples (required for mini-batching)
-            # Determine chunk width
-            random_exponent = np.random.uniform(
-                np.log10(self.min_chunk_size - 0.5),
-                np.log10(self.max_chunk_size + 0.5),
-            )
-            chunk_width = int(np.round(10.0 ** random_exponent))
-            chunk_start = np.random.randint(0, np.size(input_arr) - chunk_width + 1)
-            # Extract chunk from input
-            input_arr = input_arr[chunk_start : chunk_start + chunk_width]
-            # Pad the chunk with zeros to be a uniform length.
-            padding = self.max_chunk_size - input_arr.size
-            input_arr = np.pad(input_arr, (0, padding))
-
         return torch.tensor(input_arr), label_idx
+
+
+def sample_random_chunk(input_arr):
+    """
+    Randomly sample length of audio then pad it with zeros, so that it's always
+    the same size as all other samples (required for mini-batching)
+    """
+    # Determine chunk width
+    random_exponent = np.random.uniform(
+        np.log10(MIN_CHUNK_SIZE - 0.5), np.log10(MAX_CHUNK_SIZE + 0.5)
+    )
+    chunk_width = int(np.round(10.0 ** random_exponent))
+    chunk_start = np.random.randint(0, np.size(input_arr) - chunk_width + 1)
+    # Extract chunk from input
+    input_arr = input_arr[chunk_start : chunk_start + chunk_width]
+    # Pad the chunk with zeros to be a uniform length.
+    padding = MAX_CHUNK_SIZE - input_arr.size
+    input_arr = np.pad(input_arr, (0, padding))
+    return input_arr
+
+
+def split_even_chunks(input_arr):
+    """
+    Split the audio sample into multiple even chunks
+    """
+    even_length = len(input_arr) - len(input_arr) % MIN_CHUNK_SIZE
+    num_chunks = even_length / MIN_CHUNK_SIZE
+    chunks = np.split(input_arr[:even_length], num_chunks)
+    return chunks
+

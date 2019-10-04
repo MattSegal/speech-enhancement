@@ -9,9 +9,8 @@ class SceneNet(nn.Module):
     Convolutional network used to classify acoustic scenes.
     """
 
-    def __init__(self, num_labels, is_train=True):
+    def __init__(self, num_labels):
         super().__init__()
-        self.is_train = is_train
         self.num_labels = num_labels
         self.conv_1 = ConvLayer(in_channels=1, out_channels=32, stride=2)
         self.conv_2 = ConvLayer(in_channels=32, out_channels=32, stride=2)
@@ -78,22 +77,20 @@ class SceneNet(nn.Module):
 
         # Perform average pooling over features to produce a standard 1D feature vector.
         pooled_acts = torch.mean(conv_acts, dim=2)
-        # (batch_size,)
-        # torch.Size([128])
+        # (batch_size, num_channels)
+        # torch.Size([1, 128])
 
         # # Run linear layer over pooled features
         linear_acts = self.linear(pooled_acts)
         # Fight overfitting during training with dropout.
-        if self.is_train:
-            linear_acts = self.dropout(linear_acts)
+        linear_acts = self.dropout(linear_acts)
         # (batch_size, num_labels, 1)
+        assert linear_acts.shape[0] == batch_size
+        assert linear_acts.shape[1] == self.num_labels
         # torch.Size([1, 15])
 
         # # Run softmax over activations to produce the final probability distribution
-        prediciton_acts = linear_acts.view(batch_size, self.num_labels)
-        assert prediciton_acts.shape[1] == self.num_labels
-        # torch.Size([1, 15])
-        prediction_t = self.softmax(prediciton_acts)
+        prediction_t = self.softmax(linear_acts)
         # torch.Size([1, 15])
         assert prediction_t.shape[1] == self.num_labels
         return prediction_t
@@ -102,8 +99,8 @@ class SceneNet(nn.Module):
 class ConvLayer(nn.Module):
     """
     Single convolutional unit for the acoustic classifier network.
-        Input tensor: (batch_size, in_channels, height, width)
-        Output tensor: (batch_size, out_channels, height, width)
+        Input tensor: (batch_size, in_channels, length)
+        Output tensor: (batch_size, out_channels, length)
     """
 
     def __init__(self, in_channels, out_channels, stride):
@@ -122,17 +119,24 @@ class ConvLayer(nn.Module):
             stride=stride,
             kernel_size=3,
             padding=1,
+            bias=False,  # No bias when using batch norm
         )
         self.lrelu = nn.LeakyReLU(negative_slope=0.2)
         self.batch_norm = nn.BatchNorm1d(num_features=out_channels)
         # Apply Kaiming initialization to convolutional weights
         nn.init.kaiming_normal_(self.conv.weight)
+        # Adaptive norm parameters
+        # self.adapt_alpha = nn.Parameter(torch.tensor([1.0]))
+        # self.adapt_beta = nn.Parameter(torch.tensor([0.0]))
 
     def forward(self, input_t):
         """
         Compute output tensor from input tensor
         """
-        acts_t = self.conv(input_t)
-        acts_t = self.lrelu(acts_t)
-        acts_t = self.batch_norm(acts_t)
-        return acts_t
+        conv_t = self.conv(input_t)
+        relu_t = self.lrelu(conv_t)
+        norm_t = self.batch_norm(relu_t)
+        # Apply adaptive normalization (Fast Image Processing with Fully-Convolutional Networks)
+        # adapt_t = self.adapt_alpha * relu_t + self.adapt_beta * norm_t
+        # return adapt_t
+        return norm_t
