@@ -2,6 +2,10 @@
 
 Try to replicate Speech Denoising with Deep Feature Losses ([arXiv](https://arxiv.org/abs/1806.10522), [sound examples](https://ccrma.stanford.edu/~francois/SpeechDenoisingWithDeepFeatureLosses/))
 
+Code and concepts borrowed from [Francois Germain's repo](https://github.com/francoisgermain/SpeechDenoisingWithDeepFeatureLosses)
+
+**Status**: Currently trying to train the audio classifier network that is used for the loss function - training goes poorly.
+
 ## TODO
 
 - Look into raw audio tips
@@ -14,6 +18,8 @@ Try to replicate Speech Denoising with Deep Feature Losses ([arXiv](https://arxi
 - look into Double-DIP algorithm for further ideas on denoising
 
 ### Getting started
+
+This should get you 80% of the way there.
 
 ```bash
 sudo apt-get install sox

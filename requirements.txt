@@ -1,12 +1,22 @@
-jupyter
-tqdm 
+# Core
 torch
-requests
 numpy 
+scipy
+
+# Training
+wandb
+tqdm 
+
+# Exploration
+jupyter
 pandas 
 matplotlib 
 pandas_summary 
 feather-format 
+sklearn
+
+# Utiltiies
+requests
+
+# Formatting / linting
 black
-scipy
-wandb

@@ -21,9 +21,9 @@ from ..utils.accuracy_tracker import AccuracyTracker
 
 USE_WANDB = True
 NUM_EPOCHS = 12
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 3e-5
 ADAM_BETAS = (0.9, 0.999)
-WEIGHT_DECAY = 1e-4
+WEIGHT_DECAY = 1e-3
 BATCH_SIZE = 128
 CHECKPOINT_DIR = "checkpoints"
 
@@ -54,7 +54,7 @@ if USE_WANDB:
 
 # Setup loss function, optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(
+optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
 
