@@ -6,4 +6,4 @@ __pycache__/
 wandb.sh
 wandb/
 .ipynb_checkpoints/
-# checkpoints/
+checkpoints/
