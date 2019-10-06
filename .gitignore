@@ -7,3 +7,5 @@ wandb.sh
 wandb/
 .ipynb_checkpoints/
 checkpoints/
+.ec2-info.json
+.ec2-ip.sh

@@ -17,6 +17,7 @@ sklearn
 
 # Utiltiies
 requests
+boto3
 
 # Formatting / linting
 black
