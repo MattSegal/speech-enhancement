@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 echo -e "\nDownloading datasets...\n"
 mkdir -p data/compressed
@@ -19,24 +20,17 @@ pushd data/inflated
 tar -xzf ../compressed/chime_home.tar.gz -C ./
 popd
 
-# echo -e "\nResampling downloaded data...\n"
+echo -e "\nResampling downloaded data...\n"
+mkdir -p data/chime
+pushd data/inflated/chime_home/chunks
+for file in *.16kHz.wav; do
+    new_filename=$(echo $file | cut -d '.' -f 1-2,4) 
+    # Already sampled at 16kHz
+    sox "$file" -e float -b 32 "../../../chime/$new_filename"
+done
+popd
 
-# mkdir -p dataset/dat
-# pushd chime_home
-# for d in */; do
-#     pushd "$d"
-#     for f in *.16kHz.wav; do
-#         ff=$(echo $f | cut -d '.' -f 1-2,4) 
-#         sox "$f" -e float -b 32 "../../dataset/dat/$ff" #ALREADY AT 16KHZ
-#     done
-#     popd
-# done
-# cp "development_chunks_refined.csv" "../dataset/dat/development_chunks_refined.csv"
-# cp "evaluation_chunks_refined.csv" "../dataset/dat/evaluation_chunks_refined.csv"
-# popd
-
-# # REMOVE TMP DATA
-# rm -r asc_tmp
-# rm -r chime_home
-
-
+pushd data
+cp "inflated/chime_home/development_chunks_refined.csv" "chime/development_chunks_refined.csv"
+cp "inflated/chime_home/evaluation_chunks_refined.csv" "chime/evaluation_chunks_refined.csv"
+popd
