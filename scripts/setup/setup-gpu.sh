@@ -41,6 +41,9 @@ sudo apt-get -y install cuda
 # Check graphics card
 nvidia-smi
 
+# Install sox for graphics
+sudo apt install sox
+
 # Verify torch config.
 . enb/bin/activate
 python3 << EOF
