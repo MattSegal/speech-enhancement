@@ -19,11 +19,11 @@ from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
 from ..utils.accuracy_tracker import AccuracyTracker
 
-USE_WANDB = True
+USE_WANDB = False
 NUM_EPOCHS = 12
-LEARNING_RATE = 3e-5
+LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
-WEIGHT_DECAY = 1e-3
+WEIGHT_DECAY = 1e-2
 BATCH_SIZE = 128
 CHECKPOINT_DIR = "checkpoints"
 
@@ -52,8 +52,10 @@ net = SceneNet(num_labels=num_labels).cuda()
 if USE_WANDB:
     wandb.watch(net)
 
-# Setup loss function, optimizer
-criterion = nn.CrossEntropyLoss()
+# Setup loss functions, optimizer
+multi_class_criterion = nn.CrossEntropyLoss()
+binary_criterion = nn.BCELoss()
+
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
@@ -70,6 +72,7 @@ validation_data_loader = DataLoader(
 training_loss = MovingAverage(decay=0.8)
 validation_loss = MovingAverage(decay=0.8)
 
+# TODO - manage the 2 training and accuracy metrics separately
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
     training_accuracy = AccuracyTracker(len(training_set))
@@ -91,7 +94,10 @@ for epoch in range(NUM_EPOCHS):
 
         # Run loss function on over the model's prediction
         assert labels.shape == (batch_size,)
-        loss = criterion(outputs, labels.cuda())
+        if net.multi_class:
+            loss = multi_class_criterion(outputs, labels.cuda())
+        else:
+            loss = binary_criterion(outputs, labels.cuda())
 
         # Calculate model weight gradients from the loss
         loss.backward()
@@ -113,7 +119,7 @@ for epoch in range(NUM_EPOCHS):
         outputs = net(inputs.cuda())
         # torch.Size([256, 15])
         validation_accuracy.update(outputs, labels.cuda())
-        loss = criterion(outputs, labels.cuda())
+        loss = multi_class_criterion(outputs, labels.cuda())
         loss_amount = loss.data.item()
         validation_loss.update(loss_amount)
 
@@ -137,6 +143,8 @@ if USE_WANDB:
     checkpoint_filename = f"scene-net-{WANDB_NAME}-{int(time.time())}.ckpt"
 else:
     checkpoint_filename = f"scene-net-{int(time.time())}.ckpt"
+
+print(f"\nSaving checkpoint as {checkpoint_filename}\n")
 checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
 torch.save(net.state_dict(), checkpoint_path)
 

@@ -28,6 +28,8 @@ class SceneNet(nn.Module):
     Convolutional network used to classify acoustic scenes.
     """
 
+    multi_class = True
+
     def __init__(self, num_labels):
         super().__init__()
         self.num_labels = num_labels
@@ -36,10 +38,16 @@ class SceneNet(nn.Module):
             for in_channels, out_channels, stride in CONV_LAYERS
         ]
         self.conv = nn.Sequential(*conv_layers)
-        self.final_conv = nn.Conv1d(
+        # Used for multi-class classfication
+        self.softmax = nn.LogSoftmax(dim=1)
+        self.multi_class_conv = nn.Conv1d(
             in_channels=128, out_channels=num_labels, kernel_size=1, bias=True
         )
-        self.softmax = nn.LogSoftmax(dim=1)
+        # Used for binary classification
+        self.sigmoid = nn.Sigmoid()
+        self.binary_conv = nn.Conv1d(
+            in_channels=128, out_channels=1, kernel_size=1, bias=True
+        )
 
     def forward(self, input_t):
         """
@@ -62,21 +70,37 @@ class SceneNet(nn.Module):
         # (batch_size, num_channels)
         # torch.Size([1, 128, 1])
 
-        # Pool channels with 1x1 convolution
-        final_conv_acts = self.final_conv(pooled_acts)
-        # (batch_size, num_labels, 1)
-        # torch.Size([256, 15, 1])
+        if self.multi_class:
+            # Pool channels with 1x1 convolution
+            final_conv_acts = self.multi_class_conv(pooled_acts)
+            # (batch_size, num_labels, 1)
+            # torch.Size([256, 15, 1])
 
-        final_conv_acts = final_conv_acts.squeeze(dim=2)
-        assert final_conv_acts.shape[0] == batch_size
-        assert final_conv_acts.shape[1] == self.num_labels
-        # torch.Size([1, 15])
+            final_conv_acts = final_conv_acts.squeeze(dim=2)
+            assert final_conv_acts.shape[0] == batch_size
+            assert final_conv_acts.shape[1] == self.num_labels
+            # torch.Size([1, 15])
 
-        # # Run softmax over activations to produce the final probability distribution
-        prediction_t = self.softmax(final_conv_acts)
-        # torch.Size([1, 15])
-        assert prediction_t.shape[1] == self.num_labels
-        return prediction_t
+            # # Run softmax over activations to produce the final probability distribution
+            prediction_t = self.softmax(final_conv_acts)
+            # torch.Size([1, 15])
+            assert prediction_t.shape[1] == self.num_labels
+            return prediction_t
+        else:
+            # Pool channels with 1x1 convolution
+            final_conv_acts = self.binary_conv(pooled_acts)
+            # (batch_size, 1, 1)
+            # torch.Size([256, 1, 1])
+
+            final_conv_acts = final_conv_acts.squeeze(dim=2).squeeze(dim=1)
+            assert final_conv_acts.shape == (batch_size,)
+            # torch.Size([256,])
+
+            # Run sigmoid over activation to get a probability
+            prediction_t = self.sigmoid(final_conv_acts)
+            # torch.Size([256, ])
+            assert prediction_t.shape == (batch_size,)
+            return prediction_t
 
 
 class ConvLayer(nn.Module):

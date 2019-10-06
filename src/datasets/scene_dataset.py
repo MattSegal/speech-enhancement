@@ -13,6 +13,23 @@ CHUNK_SIZE = 32767
 MIN_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 1) - 1
 MAX_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 2) - 1
 SUB_SAMPLE = False
+CLASS_LABELS = [
+    "bus",
+    "car",
+    "forest_path",
+    "cafe/restaurant",
+    "residential_area",
+    "library",
+    "park",
+    "grocery_store",
+    "city_center",
+    "beach",
+    "train",
+    "tram",
+    "home",
+    "office",
+    "metro_station",
+]
 
 
 class SceneDataset(Dataset):
@@ -21,6 +38,8 @@ class SceneDataset(Dataset):
     The input is a 1D tensor of floats, representing a complete noisy audio sample.
     The target is an integer, representing a scene label. 
     """
+
+    labels = CLASS_LABELS
 
     def __init__(self, train):
         """
@@ -38,17 +57,16 @@ class SceneDataset(Dataset):
             meta_text = f.read()
 
         label_lookup = {}
-        self.labels = set()
         for line in meta_text.split("\n"):
             if line:
                 filename, label = line.split("\t")
+                assert label in CLASS_LABELS
                 filename_cleaned = filename.replace("audio/", "")
                 label_lookup[filename_cleaned] = label
-                self.labels.add(label)
 
         self.idx_to_label = {}
         self.label_to_idx = {}
-        for idx, label in enumerate(self.labels):
+        for idx, label in enumerate(CLASS_LABELS):
             self.idx_to_label[idx] = label
             self.label_to_idx[label] = idx
 
