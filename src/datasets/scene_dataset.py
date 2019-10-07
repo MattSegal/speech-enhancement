@@ -8,10 +8,7 @@ from torch.utils.data import Dataset
 from scipy.io import wavfile
 
 DATA_PATH = "data/"
-NUM_CONV_LAYERS = 14
 CHUNK_SIZE = 32767
-MIN_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 1) - 1
-MAX_CHUNK_SIZE = 2 ** (NUM_CONV_LAYERS + 2) - 1
 SUB_SAMPLE = False
 CLASS_LABELS = [
     "bus",
@@ -37,6 +34,8 @@ class SceneDataset(Dataset):
     A dataset of acoustic scenes and their label, for use in the acoustic scene classification task.
     The input is a 1D tensor of floats, representing a complete noisy audio sample.
     The target is an integer, representing a scene label. 
+
+    http://www.cs.tut.fi/sgn/arg/dcase2017/challenge/task-acoustic-scene-classification
     """
 
     labels = CLASS_LABELS
@@ -47,7 +46,7 @@ class SceneDataset(Dataset):
         """
         self.train = train
         dataset_label = "training" if train else "validation"
-        print(f"\nLoading {dataset_label} dataset into memory.")
+        print(f"\nLoading TUT {dataset_label} dataset into memory.")
         data_folder = os.path.join(DATA_PATH, f"scenes_{dataset_label}_set")
 
         # Load class labels from a text file.
@@ -127,6 +126,22 @@ class SceneDataset(Dataset):
         return torch.tensor(input_arr), label_idx
 
 
+def split_even_chunks(input_arr):
+    """
+    Split the audio sample into multiple even chunks,
+    with a random offset.
+    """
+    even_length = len(input_arr) - len(input_arr) % CHUNK_SIZE
+    remainder_length = len(input_arr) - even_length
+    offset = np.random.randint(0, remainder_length + 1)
+    num_chunks = even_length / CHUNK_SIZE
+    start = offset
+    end = offset + even_length
+    chunks = np.split(input_arr[start:end], num_chunks)
+    return chunks
+
+
+# Unused
 def normalize_audio(input_arr):
     """
     Normalize audio so each file is bound between +/- 1
@@ -135,6 +150,7 @@ def normalize_audio(input_arr):
     return (2 * (input_arr - input_arr.min()) - 1) / signal_range
 
 
+# Unused
 def add_noise(input_arr):
     """
     Add random noise for training-time data augmentation
@@ -143,6 +159,7 @@ def add_noise(input_arr):
     return input_arr + noise.astype("float32")
 
 
+# Unused
 def sample_random_chunk(input_arr):
     """
     Randomly sample length of audio then pad it with zeros, so that it's always
@@ -161,17 +178,3 @@ def sample_random_chunk(input_arr):
     input_arr = np.pad(input_arr, (0, padding))
     return input_arr
 
-
-def split_even_chunks(input_arr):
-    """
-    Split the audio sample into multiple even chunks,
-    with a random offset.
-    """
-    even_length = len(input_arr) - len(input_arr) % CHUNK_SIZE
-    remainder_length = len(input_arr) - even_length
-    offset = np.random.randint(0, remainder_length + 1)
-    num_chunks = even_length / CHUNK_SIZE
-    start = offset
-    end = offset + even_length
-    chunks = np.split(input_arr[start:end], num_chunks)
-    return chunks

@@ -21,12 +21,18 @@ tar -xzf ../compressed/chime_home.tar.gz -C ./
 popd
 
 echo -e "\nResampling downloaded data...\n"
-mkdir -p data/chime
+mkdir -p data/chime/audio
+mkdir -p data/chime/labels
 pushd data/inflated/chime_home/chunks
+# Copy file metadata
+for file in *.csv; do
+    cp "$file" "../../../chime/labels/$file"
+done
+# Resample audio files
 for file in *.16kHz.wav; do
     new_filename=$(echo $file | cut -d '.' -f 1-2,4) 
     # Already sampled at 16kHz
-    sox "$file" -e float -b 32 "../../../chime/$new_filename"
+    sox "$file" -e float -b 32 "../../../chime/audio/$new_filename"
 done
 popd
 

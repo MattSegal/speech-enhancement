@@ -15,12 +15,14 @@ from torch.utils.data import DataLoader
 import wandb
 
 from ..datasets.scene_dataset import SceneDataset
+
+from ..datasets.chime_dataset import ChimeDataset
 from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
 from ..utils.accuracy_tracker import AccuracyTracker
 
 USE_WANDB = False
-NUM_EPOCHS = 12
+NUM_EPOCHS = 1
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
@@ -43,19 +45,17 @@ if USE_WANDB:
     )
 
 # Load dataset
-training_set = SceneDataset(train=True)
-validation_set = SceneDataset(train=False)
-num_labels = len(training_set.labels)
+training_set = ChimeDataset(train=True)
+validation_set = ChimeDataset(train=False)
 
 # Initialize model
-net = SceneNet(num_labels=num_labels).cuda()
+net = SceneNet().cuda()
+net.set_chime_dataset()
 if USE_WANDB:
     wandb.watch(net)
 
 # Setup loss functions, optimizer
-multi_class_criterion = nn.CrossEntropyLoss()
-binary_criterion = nn.BCELoss()
-
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
@@ -72,7 +72,6 @@ validation_data_loader = DataLoader(
 training_loss = MovingAverage(decay=0.8)
 validation_loss = MovingAverage(decay=0.8)
 
-# TODO - manage the 2 training and accuracy metrics separately
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
     training_accuracy = AccuracyTracker(len(training_set))
@@ -89,15 +88,21 @@ for epoch in range(NUM_EPOCHS):
 
         # Get a prediction from the model
         outputs = net(inputs.cuda())
-        assert outputs.shape == (batch_size, num_labels)
-        training_accuracy.update(outputs, labels.cuda())
+
+        #  Sanity check the shape of output and labels
+        assert outputs.shape == (batch_size, net.num_labels)
+        if net.dataset == net.TUT:
+            # Expect an array of indexes
+            assert labels.shape == (batch_size,)
+        else:
+            # Expect an array of class label vectors
+            assert labels.shape == (batch_size, net.num_labels)
 
         # Run loss function on over the model's prediction
-        assert labels.shape == (batch_size,)
-        if net.multi_class:
-            loss = multi_class_criterion(outputs, labels.cuda())
-        else:
-            loss = binary_criterion(outputs, labels.cuda())
+        import pdb
+
+        pdb.set_trace()
+        loss = criterion(outputs, labels.cuda())
 
         # Calculate model weight gradients from the loss
         loss.backward()
@@ -108,6 +113,7 @@ for epoch in range(NUM_EPOCHS):
         # Track training information
         loss_amount = loss.data.item()
         training_loss.update(loss_amount)
+        training_accuracy.update(outputs, labels.cuda())
 
     # Check performance (loss, accurancy) on validation set.
     net.eval()
@@ -115,13 +121,11 @@ for epoch in range(NUM_EPOCHS):
     for inputs, labels in tqdm(validation_data_loader):
         batch_size = inputs.shape[0]
         inputs = inputs.view(batch_size, 1, -1)
-        # torch.Size([256, 1, 32767])
         outputs = net(inputs.cuda())
-        # torch.Size([256, 15])
-        validation_accuracy.update(outputs, labels.cuda())
-        loss = multi_class_criterion(outputs, labels.cuda())
+        loss = criterion(outputs, labels.cuda())
         loss_amount = loss.data.item()
         validation_loss.update(loss_amount)
+        validation_accuracy.update(outputs, labels.cuda())
 
     # Log training information
     print(f"\n\tTraining loss:       {training_loss.value:0.4f}")

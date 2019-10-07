@@ -7,17 +7,17 @@ CONV_LAYERS = [
     # in, out, stride
     [1, 32, 2],
     [32, 32, 2],
-    [32, 32, 2],
-    [32, 32, 2],
-    [32, 32, 2],
+    # [32, 32, 2],
+    # [32, 32, 2],
+    # [32, 32, 2],
     [32, 64, 2],
-    [64, 64, 2],
-    [64, 64, 2],
+    # [64, 64, 2],
+    # [64, 64, 2],
     [64, 64, 2],
     [64, 128, 2],
-    [128, 128, 2],
-    [128, 128, 2],
-    [128, 128, 2],
+    # [128, 128, 2],
+    # [128, 128, 2],
+    # [128, 128, 2],
     [128, 128, 2],
     [128, 128, 1],
 ]
@@ -28,25 +28,34 @@ class SceneNet(nn.Module):
     Convolutional network used to classify acoustic scenes.
     """
 
-    multi_class = True
+    CHIME = "CHIME"
+    TUT = "TUT"
+    NUM_CHIME_LABELS = 8
+    NUM_TUT_LABELS = 15
+    dataset = TUT
 
-    def __init__(self, num_labels):
+    def __init__(self):
         super().__init__()
-        self.num_labels = num_labels
         conv_layers = [
             ConvLayer(in_channels, out_channels, stride=stride)
             for in_channels, out_channels, stride in CONV_LAYERS
         ]
         self.conv = nn.Sequential(*conv_layers)
-        # Used for multi-class classfication
+        # Used for TUT dataset classfication
         self.softmax = nn.LogSoftmax(dim=1)
-        self.multi_class_conv = nn.Conv1d(
-            in_channels=128, out_channels=num_labels, kernel_size=1, bias=True
+        self.tut_conv = nn.Conv1d(
+            in_channels=128,
+            out_channels=self.NUM_TUT_LABELS,
+            kernel_size=1,
+            bias=True,
         )
-        # Used for binary classification
+        # Used for CHiME datset classification
         self.sigmoid = nn.Sigmoid()
-        self.binary_conv = nn.Conv1d(
-            in_channels=128, out_channels=1, kernel_size=1, bias=True
+        self.chime_conv = nn.Conv1d(
+            in_channels=128,
+            out_channels=self.NUM_CHIME_LABELS,
+            kernel_size=1,
+            bias=True,
         )
 
     def forward(self, input_t):
@@ -61,46 +70,59 @@ class SceneNet(nn.Module):
 
         # Pass input through a series of 1D covolutions
         # (batch_size, channels, length)
-        # torch.Size([1, 1, 32767])
+        # torch.Size([256, 1, 32767+])
         conv_acts = self.conv(input_t)
-        # torch.Size([1, 128, 2])
+        # torch.Size([256, 128, 2+])
 
         # Perform average pooling over features to produce a standard 1D feature vector.
         pooled_acts = torch.mean(conv_acts, dim=2, keepdim=True)
         # (batch_size, num_channels)
-        # torch.Size([1, 128, 1])
+        # torch.Size([256, 128, 1])
 
-        if self.multi_class:
+        if self.dataset == self.TUT:
             # Pool channels with 1x1 convolution
-            final_conv_acts = self.multi_class_conv(pooled_acts)
+            final_conv_acts = self.tut_conv(pooled_acts)
             # (batch_size, num_labels, 1)
             # torch.Size([256, 15, 1])
 
             final_conv_acts = final_conv_acts.squeeze(dim=2)
             assert final_conv_acts.shape[0] == batch_size
-            assert final_conv_acts.shape[1] == self.num_labels
-            # torch.Size([1, 15])
+            assert final_conv_acts.shape[1] == self.NUM_TUT_LABELS
+            # torch.Size([256, 15])
 
             # # Run softmax over activations to produce the final probability distribution
             prediction_t = self.softmax(final_conv_acts)
-            # torch.Size([1, 15])
-            assert prediction_t.shape[1] == self.num_labels
+            # torch.Size([256, 15])
+            assert prediction_t.shape[1] == self.NUM_TUT_LABELS
             return prediction_t
         else:
             # Pool channels with 1x1 convolution
-            final_conv_acts = self.binary_conv(pooled_acts)
-            # (batch_size, 1, 1)
-            # torch.Size([256, 1, 1])
+            final_conv_acts = self.chime_conv(pooled_acts)
+            # (batch_size, num_labels, 1)
+            # torch.Size([256, 8, 1])
 
-            final_conv_acts = final_conv_acts.squeeze(dim=2).squeeze(dim=1)
-            assert final_conv_acts.shape == (batch_size,)
-            # torch.Size([256,])
+            final_conv_acts = final_conv_acts.squeeze(dim=2)
+            assert final_conv_acts.shape == (batch_size, self.NUM_CHIME_LABELS)
+            # torch.Size([256, 8])
 
             # Run sigmoid over activation to get a probability
             prediction_t = self.sigmoid(final_conv_acts)
-            # torch.Size([256, ])
-            assert prediction_t.shape == (batch_size,)
+            # torch.Size([256, 8])
+            assert prediction_t.shape == (batch_size, self.NUM_CHIME_LABELS)
             return prediction_t
+
+    def set_tut_dataset(self):
+        self.dataset = self.TUT
+
+    def set_chime_dataset(self):
+        self.dataset = self.CHIME
+
+    @property
+    def num_labels(self):
+        if self.dataset == self.CHIME:
+            return self.NUM_CHIME_LABELS
+        else:
+            return self.NUM_TUT_LABELS
 
 
 class ConvLayer(nn.Module):
