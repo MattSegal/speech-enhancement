@@ -20,7 +20,7 @@ from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
 from ..utils.accuracy_tracker import AccuracyTracker, HammingLossTracker
 
-USE_CUDA = False
+USE_CUDA = True
 USE_WANDB = False
 NUM_EPOCHS = 20
 LEARNING_RATE = 1e-4

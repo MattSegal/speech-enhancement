@@ -56,6 +56,9 @@ def describe_instances():
 
     instances = []
     for aws_instance in aws_instances:
+        if aws_instance["State"]["Name"] == "terminated":
+            continue
+
         name = ""
         for tag in aws_instance["Tags"]:
             if tag["Key"] == "Name":

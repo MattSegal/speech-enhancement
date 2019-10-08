@@ -26,6 +26,8 @@ def stop(name):
     instance = aws.find_instance(name)
     if instance:
         aws.stop_instance(instance)
+    else:
+        click.echo(f"Instance {name} not found")
 
 
 @click.command()
@@ -35,6 +37,8 @@ def start(name):
     instance = aws.find_instance(name)
     if instance:
         aws.start_instance(instance)
+    else:
+        click.echo(f"Instance {name} not found")
 
 
 @click.command()
@@ -44,6 +48,10 @@ def ssh(name):
     instance = aws.find_instance(name)
     if instance and aws.is_running(instance):
         remote.ssh_interactive(instance)
+    elif instance:
+        click.echo(f"Instance {name} not running")
+    else:
+        click.echo(f"Instance {name} not found")
 
 
 cli.add_command(status)
