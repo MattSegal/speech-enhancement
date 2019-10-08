@@ -15,18 +15,17 @@ from torch.utils.data import DataLoader
 import wandb
 
 from ..datasets.scene_dataset import SceneDataset
-
 from ..datasets.chime_dataset import ChimeDataset
 from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
-from ..utils.accuracy_tracker import AccuracyTracker
+from ..utils.accuracy_tracker import AccuracyTracker, HammingLossTracker
 
 USE_WANDB = False
-NUM_EPOCHS = 1
+NUM_EPOCHS = 20
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 CHECKPOINT_DIR = "checkpoints"
 
 if USE_WANDB:
@@ -55,7 +54,9 @@ if USE_WANDB:
     wandb.watch(net)
 
 # Setup loss functions, optimizer
-criterion = nn.CrossEntropyLoss()
+tut_criterion = nn.CrossEntropyLoss()
+chime_criterion = nn.BCELoss()
+
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
@@ -74,7 +75,7 @@ validation_loss = MovingAverage(decay=0.8)
 
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
-    training_accuracy = AccuracyTracker(len(training_set))
+    training_accuracy = HammingLossTracker(len(training_set), 8)
 
     # Run training loop
     net.train()
@@ -88,21 +89,17 @@ for epoch in range(NUM_EPOCHS):
 
         # Get a prediction from the model
         outputs = net(inputs.cuda())
-
-        #  Sanity check the shape of output and labels
         assert outputs.shape == (batch_size, net.num_labels)
+
+        # Run loss function on over the model's prediction
         if net.dataset == net.TUT:
             # Expect an array of indexes
             assert labels.shape == (batch_size,)
+            loss = tut_criterion(outputs, labels.cuda())
         else:
             # Expect an array of class label vectors
             assert labels.shape == (batch_size, net.num_labels)
-
-        # Run loss function on over the model's prediction
-        import pdb
-
-        pdb.set_trace()
-        loss = criterion(outputs, labels.cuda())
+            loss = chime_criterion(outputs, labels.cuda())
 
         # Calculate model weight gradients from the loss
         loss.backward()
@@ -117,12 +114,16 @@ for epoch in range(NUM_EPOCHS):
 
     # Check performance (loss, accurancy) on validation set.
     net.eval()
-    validation_accuracy = AccuracyTracker(len(validation_set))
+    validation_accuracy = HammingLossTracker(len(validation_set), 8)
     for inputs, labels in tqdm(validation_data_loader):
         batch_size = inputs.shape[0]
         inputs = inputs.view(batch_size, 1, -1)
         outputs = net(inputs.cuda())
-        loss = criterion(outputs, labels.cuda())
+        if net.dataset == net.TUT:
+            loss = tut_criterion(outputs, labels.cuda())
+        else:
+            loss = chime_criterion(outputs, labels.cuda())
+
         loss_amount = loss.data.item()
         validation_loss.update(loss_amount)
         validation_accuracy.update(outputs, labels.cuda())
@@ -130,8 +131,8 @@ for epoch in range(NUM_EPOCHS):
     # Log training information
     print(f"\n\tTraining loss:       {training_loss.value:0.4f}")
     print(f"\tValidation loss:     {validation_loss.value:0.4f}")
-    print(f"\tTraining accuracy:   {training_accuracy.accuracy:0.2f}")
-    print(f"\tValidation accuracy: {validation_accuracy.accuracy:0.2f}")
+    print(f"\tTraining accuracy:   {training_accuracy.hamming_loss:0.2f}")
+    print(f"\tValidation accuracy: {validation_accuracy.hamming_loss:0.2f}")
     if USE_WANDB:
         wandb.log(
             {
