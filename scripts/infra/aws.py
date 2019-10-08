@@ -7,12 +7,7 @@ from tabulate import tabulate
 
 client = boto3.client("ec2")
 
-DESCRIBE_KEY_MAP = {
-    "InstanceId": "InstanceId",
-    "InstanceType": "InstanceType",
-    "LaunchTime": "LaunchTime",
-    "State": "State",
-}
+DESCRIBE_KEYS = ["InstanceId", "InstanceType", "LaunchTime", "State"]
 
 
 def find_instance(name):
@@ -46,8 +41,7 @@ def print_status(instances):
     now = datetime.utcnow().replace(tzinfo=tzutc())
     print("\nEC2 instance statuses\n")
     table_data = [
-        [i["name"], i["State"]["Name"], timeago.format(i["LaunchTime"], now)]
-        for i in instances
+        [i["name"], i["State"]["Name"], timeago.format(i["LaunchTime"], now)] for i in instances
     ]
     table_str = tabulate(table_data, headers=["Name", "Status", "Launched"])
     print(table_str, "\n")
@@ -71,8 +65,8 @@ def describe_instances():
         instance["name"] = name
         instances.append(instance)
         for k, v in aws_instance.items():
-            if k in DESCRIBE_KEY_MAP:
-                instance[DESCRIBE_KEY_MAP[k]] = v
+            if k in DESCRIBE_KEYS:
+                instance[k] = v
 
         # Read IP address
         network_interface = aws_instance["NetworkInterfaces"][0]

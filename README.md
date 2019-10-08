@@ -8,6 +8,7 @@ Code and concepts borrowed from [Francois Germain's repo](https://github.com/fra
 
 ## TODO
 
+- try g3 instances for a GPU that works
 - Look into raw audio tips
 - Try train a resnet / VGG on images to sanity check architecture
 - Try to reproduce an image denoising algo
