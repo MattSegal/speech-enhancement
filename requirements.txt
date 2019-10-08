@@ -18,9 +18,6 @@ sklearn
 # Utiltiies
 requests
 
-# Formatting / linting
-black
-
 # AWS infra
 boto3
 timeago
