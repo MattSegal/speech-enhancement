@@ -8,7 +8,29 @@ class SpeechDenoiseNet(nn.Module):
     """
 
     def __init__(self):
-        pass
+
+        ConvLayer(in_channels=1, out_channels=32, dilation=1)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**1)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**2)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**3)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**4)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**5)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**6)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**7)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**8)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**9)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**10)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**11)
+        ConvLayer(in_channels=32, out_channels=32, dilation=2**12)
+        ConvLayer(in_channels=32, out_channels=32, dilation=1)
+
+        self.final_conv = nn.Conv1d(
+            in_channels=32
+            out_channels=1,
+            kernel_size=1,
+            bias=True,
+        )
+
 
     def forward(self, input_t):
         """
@@ -51,7 +73,7 @@ class ConvLayer(nn.Module):
         """
         super().__init__()
         # Configure padding so the input and output sizes are the same.
-
+        # You could just do the padding manually with pytorch
         self.conv = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,

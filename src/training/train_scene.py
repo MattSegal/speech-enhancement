@@ -21,8 +21,8 @@ from ..utils.moving_average import MovingAverage
 from ..utils.accuracy_tracker import AccuracyTracker, HammingLossTracker
 
 USE_CUDA = True
-USE_WANDB = False
-NUM_EPOCHS = 20
+USE_WANDB = True
+NUM_EPOCHS = 50
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
@@ -85,7 +85,8 @@ tut_validation_loss = MovingAverage(decay=0.8)
 
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
-    use_chime = epoch % 2 == 0
+    # use_chime = epoch % 2 == 0
+    use_chime = True
     if use_chime:
         print("Using CHiME dataset")
         net.set_chime_dataset()
