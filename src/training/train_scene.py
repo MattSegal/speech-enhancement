@@ -19,9 +19,10 @@ from ..datasets.chime_dataset import ChimeDataset
 from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
 from ..utils.accuracy_tracker import AccuracyTracker, HammingLossTracker
+from ..utils.data_load import CombinedDataLoader
 
 USE_CUDA = True
-USE_WANDB = True
+USE_WANDB = False
 NUM_EPOCHS = 50
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
@@ -85,36 +86,28 @@ tut_validation_loss = MovingAverage(decay=0.8)
 
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
-    # use_chime = epoch % 2 == 0
-    use_chime = True
-    if use_chime:
-        print("Using CHiME dataset")
-        net.set_chime_dataset()
-        training_set = chime_training_set
-        validation_set = chime_validation_set
-        data_loader = chime_training_data_loader
-        validation_data_loader = chime_validation_data_loader
-        training_accuracy = HammingLossTracker(len(training_set), 8)
-        validation_accuracy = HammingLossTracker(len(validation_set), 8)
-        training_loss = chime_training_loss
-        validation_loss = chime_validation_loss
-        criterion = chime_criterion
-    else:
-        print("Using TUT dataset")
-        net.set_tut_dataset()
-        training_set = tut_training_set
-        validation_set = tut_validation_set
-        data_loader = tut_training_data_loader
-        validation_data_loader = tut_validation_data_loader
-        training_accuracy = AccuracyTracker(len(training_set))
-        validation_accuracy = AccuracyTracker(len(validation_set))
-        training_loss = tut_training_loss
-        validation_loss = tut_validation_loss
-        criterion = tut_criterion
+    data_loader = CombinedDataLoader(chime_training_data_loader, tut_training_data_loader)
+
+    chime_training_accuracy = HammingLossTracker(len(chime_training_set), 8)
+    chime_validation_accuracy = HammingLossTracker(len(chime_validation_set), 8)
+    tut_training_accuracy = AccuracyTracker(len(tut_training_set))
+    tut_validation_accuracy = AccuracyTracker(len(tut_validation_set))
 
     # Run training loop
     net.train()
     for inputs, labels in tqdm(data_loader):
+        use_chime = data_loader.is_loader_a
+        if use_chime:
+            net.set_chime_dataset()
+            training_accuracy = chime_training_accuracy
+            training_loss = chime_training_loss
+            criterion = chime_criterion
+        else:
+            net.set_tut_dataset()
+            training_accuracy = tut_training_accuracy
+            training_loss = tut_training_loss
+            criterion = tut_criterion
+
         # Add channel dimension to input
         batch_size = inputs.shape[0]
         inputs = inputs.view(batch_size, 1, -1)
@@ -145,8 +138,21 @@ for epoch in range(NUM_EPOCHS):
         training_accuracy.update(outputs, labels)
 
     # Check performance (loss, accurancy) on validation set.
+    data_loader = CombinedDataLoader(chime_validation_data_loader, tut_validation_data_loader)
     net.eval()
-    for inputs, labels in tqdm(validation_data_loader):
+    for inputs, labels in tqdm(data_loader):
+        use_chime = data_loader.is_loader_a
+        if use_chime:
+            net.set_chime_dataset()
+            validation_accuracy = chime_validation_accuracy
+            validation_loss = chime_validation_loss
+            criterion = chime_criterion
+        else:
+            net.set_tut_dataset()
+            validation_accuracy = tut_validation_accuracy
+            validation_loss = tut_validation_loss
+            criterion = tut_criterion
+
         batch_size = inputs.shape[0]
         inputs = inputs.view(batch_size, 1, -1)
         inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
@@ -158,10 +164,18 @@ for epoch in range(NUM_EPOCHS):
         validation_accuracy.update(outputs, labels)
 
     # Log training information
-    print(f"\n\tTraining loss:       {training_loss.value:0.4f}")
-    print(f"\tValidation loss:     {validation_loss.value:0.4f}")
-    print(f"\tTraining accuracy:   {training_accuracy.value:0.2f}")
-    print(f"\tValidation accuracy: {validation_accuracy.value:0.2f}")
+    print("\nCHiME training data")
+    print(f"\n\tTraining loss:       {chime_training_loss.value:0.4f}")
+    print(f"\tValidation loss:     {chime_validation_loss.value:0.4f}")
+    print(f"\tTraining accuracy:   {chime_training_accuracy.value:0.2f}")
+    print(f"\tValidation accuracy: {chime_validation_accuracy.value:0.2f}")
+
+    print("\nTUT training data")
+    print(f"\n\tTraining loss:       {tut_training_loss.value:0.4f}")
+    print(f"\tValidation loss:     {tut_validation_loss.value:0.4f}")
+    print(f"\tTraining accuracy:   {tut_training_accuracy.value:0.2f}")
+    print(f"\tValidation accuracy: {tut_validation_accuracy.value:0.2f}")
+
     if USE_WANDB:
         wandb.log(
             {
