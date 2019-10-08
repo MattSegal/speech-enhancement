@@ -19,7 +19,7 @@ class AccuracyTracker:
         self.num_success += successful_predictions.sum().item()
 
     @property
-    def accuracy(self):
+    def value(self):
         """
         0 is worst - none of the samples were correctly classified
         1 is best - all of of the samples were correctly classified
@@ -54,7 +54,7 @@ class HammingLossTracker:
         self.num_wrong += failed_predictions.sum().item()
 
     @property
-    def hamming_loss(self):
+    def value(self):
         """
         0 is best - every class, for every label was correct
         1 is worst - every class, for every label was wrong

@@ -159,15 +159,15 @@ for epoch in range(NUM_EPOCHS):
     # Log training information
     print(f"\n\tTraining loss:       {training_loss.value:0.4f}")
     print(f"\tValidation loss:     {validation_loss.value:0.4f}")
-    print(f"\tTraining accuracy:   {training_accuracy.hamming_loss:0.2f}")
-    print(f"\tValidation accuracy: {validation_accuracy.hamming_loss:0.2f}")
+    print(f"\tTraining accuracy:   {training_accuracy.value:0.2f}")
+    print(f"\tValidation accuracy: {validation_accuracy.value:0.2f}")
     if USE_WANDB:
         wandb.log(
             {
                 "Training Loss": training_loss.value,
                 "Validation Loss": validation_loss.value,
-                "Training Accuracy": training_accuracy.accuracy,
-                "Validation Accuracy": validation_accuracy.accuracy,
+                "Training Accuracy": training_accuracy.value,
+                "Validation Accuracy": validation_accuracy.value,
             }
         )
 
