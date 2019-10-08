@@ -3,12 +3,9 @@ from dateutil.tz import tzutc
 
 import boto3
 import timeago
-
-import settings
+from tabulate import tabulate
 
 client = boto3.client("ec2")
-
-import pprint
 
 DESCRIBE_KEY_MAP = {
     "InstanceId": "InstanceId",
@@ -27,56 +24,6 @@ def find_instance(name):
     return None
 
 
-def is_running(instance):
-    status = instance["State"]["Name"]
-    return status == "running"
-
-
-def print_status(instances):
-    now = datetime.utcnow().replace(tzinfo=tzutc())
-    print("\nInstance status:\n")
-    print("Name\t\tStatus\t\tLaunched")
-    print("----------------------------------------------")
-    for instance in instances:
-        name = instance["name"]
-        time_str = timeago.format(instance["LaunchTime"], now)
-        status = instance["State"]["Name"]
-        print(f"{name}\t\t{status}\t\t{time_str}")
-
-    print("")
-
-
-def describe_instances():
-    ids = [i["id"] for i in settings.INSTANCES]
-    response = client.describe_instances(InstanceIds=ids)
-    aws_instances = []
-    for reservation in response["Reservations"]:
-        for aws_instance in reservation["Instances"]:
-            aws_instances.append(aws_instance)
-
-    instances = []
-    for aws_instance in aws_instances:
-        instance = {}
-        instances.append(instance)
-        for k, v in aws_instance.items():
-            if k in DESCRIBE_KEY_MAP:
-                instance[DESCRIBE_KEY_MAP[k]] = v
-
-        # Read IP address
-        network_interface = aws_instance["NetworkInterfaces"][0]
-        try:
-            instance["ip"] = network_interface["Association"]["PublicIp"]
-        except KeyError:
-            instance["ip"] = None
-
-        # Match ID with name
-        for i in settings.INSTANCES:
-            if i["id"] == instance["InstanceId"]:
-                instance["name"] = i["name"]
-
-    return instances
-
-
 def start_instance(instance):
     name = instance["name"]
     print(f"Starting EC2 instance {name}")
@@ -89,3 +36,49 @@ def stop_instance(instance):
     response = client.stop_instances(InstanceIds=[instance["InstanceId"]])
     print(response)
 
+
+def is_running(instance):
+    status = instance["State"]["Name"]
+    return status == "running"
+
+
+def print_status(instances):
+    now = datetime.utcnow().replace(tzinfo=tzutc())
+    print("\nEC2 instance statuses\n")
+    table_data = [
+        [i["name"], i["State"]["Name"], timeago.format(i["LaunchTime"], now)]
+        for i in instances
+    ]
+    table_str = tabulate(table_data, headers=["Name", "Status", "Launched"])
+    print(table_str, "\n")
+
+
+def describe_instances():
+    response = client.describe_instances()
+    aws_instances = []
+    for reservation in response["Reservations"]:
+        for aws_instance in reservation["Instances"]:
+            aws_instances.append(aws_instance)
+
+    instances = []
+    for aws_instance in aws_instances:
+        name = ""
+        for tag in aws_instance["Tags"]:
+            if tag["Key"] == "Name":
+                name = tag["Value"]
+
+        instance = {}
+        instance["name"] = name
+        instances.append(instance)
+        for k, v in aws_instance.items():
+            if k in DESCRIBE_KEY_MAP:
+                instance[DESCRIBE_KEY_MAP[k]] = v
+
+        # Read IP address
+        network_interface = aws_instance["NetworkInterfaces"][0]
+        try:
+            instance["ip"] = network_interface["Association"]["PublicIp"]
+        except KeyError:
+            instance["ip"] = None
+
+    return instances

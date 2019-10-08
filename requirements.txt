@@ -22,3 +22,4 @@ requests
 boto3
 timeago
 click
+tabulate
