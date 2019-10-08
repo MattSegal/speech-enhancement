@@ -20,13 +20,13 @@ from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
 from ..utils.accuracy_tracker import AccuracyTracker, HammingLossTracker
 
-USE_CUDA = True
+USE_CUDA = False
 USE_WANDB = False
 NUM_EPOCHS = 20
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
-BATCH_SIZE = 64
+BATCH_SIZE = 1
 CHECKPOINT_DIR = "checkpoints"
 
 if USE_WANDB:
@@ -45,37 +45,71 @@ if USE_WANDB:
         },
     )
 
-# Load dataset
-training_set = ChimeDataset(train=True)
-validation_set = ChimeDataset(train=False)
+# Load datasets
+chime_training_set = ChimeDataset(train=True)
+chime_validation_set = ChimeDataset(train=False)
+tut_training_set = SceneDataset(train=True)
+tut_validation_set = SceneDataset(train=False)
+
+# Construct data loaders
+chime_training_data_loader = DataLoader(
+    chime_training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
+)
+chime_validation_data_loader = DataLoader(
+    chime_validation_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=3
+)
+tut_training_data_loader = DataLoader(
+    tut_training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
+)
+tut_validation_data_loader = DataLoader(
+    tut_validation_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=3
+)
 
 # Initialize model
 net = SceneNet().cuda() if USE_CUDA else SceneNet().cpu()
-net.set_chime_dataset()
 if USE_WANDB:
     wandb.watch(net)
 
 # Setup loss functions, optimizer
 tut_criterion = nn.CrossEntropyLoss()
 chime_criterion = nn.BCELoss()
-
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
 
-# Construct data loaders
-data_loader = DataLoader(training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3)
-validation_data_loader = DataLoader(
-    validation_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=3
-)
-
 # Keep track of loss history using moving average
-training_loss = MovingAverage(decay=0.8)
-validation_loss = MovingAverage(decay=0.8)
+chime_training_loss = MovingAverage(decay=0.8)
+chime_validation_loss = MovingAverage(decay=0.8)
+tut_training_loss = MovingAverage(decay=0.8)
+tut_validation_loss = MovingAverage(decay=0.8)
 
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
-    training_accuracy = HammingLossTracker(len(training_set), 8)
+    use_chime = epoch % 2 == 0
+    if use_chime:
+        print("Using CHiME dataset")
+        net.set_chime_dataset()
+        training_set = chime_training_set
+        validation_set = chime_validation_set
+        data_loader = chime_training_data_loader
+        validation_data_loader = chime_validation_data_loader
+        training_accuracy = HammingLossTracker(len(training_set), 8)
+        validation_accuracy = HammingLossTracker(len(validation_set), 8)
+        training_loss = chime_training_loss
+        validation_loss = chime_validation_loss
+        criterion = chime_criterion
+    else:
+        print("Using TUT dataset")
+        net.set_tut_dataset()
+        training_set = tut_training_set
+        validation_set = tut_validation_set
+        data_loader = tut_training_data_loader
+        validation_data_loader = tut_validation_data_loader
+        training_accuracy = AccuracyTracker(len(training_set))
+        validation_accuracy = AccuracyTracker(len(validation_set))
+        training_loss = tut_training_loss
+        validation_loss = tut_validation_loss
+        criterion = tut_criterion
 
     # Run training loop
     net.train()
@@ -94,14 +128,9 @@ for epoch in range(NUM_EPOCHS):
 
         # Run loss function on over the model's prediction
         labels = labels.cuda() if USE_CUDA else labels.cpu()
-        if net.dataset == net.TUT:
-            # Expect an array of indexes
-            assert labels.shape == (batch_size,)
-            loss = tut_criterion(outputs, labels)
-        else:
-            # Expect an array of class label vectors
-            assert labels.shape == (batch_size, net.num_labels)
-            loss = chime_criterion(outputs, labels)
+        expect_labels_shape = (batch_size, net.num_labels) if use_chime else (batch_size,)
+        assert labels.shape == expect_labels_shape
+        loss = criterion(outputs, labels)
 
         # Calculate model weight gradients from the loss
         loss.backward()
@@ -116,18 +145,13 @@ for epoch in range(NUM_EPOCHS):
 
     # Check performance (loss, accurancy) on validation set.
     net.eval()
-    validation_accuracy = HammingLossTracker(len(validation_set), 8)
     for inputs, labels in tqdm(validation_data_loader):
         batch_size = inputs.shape[0]
         inputs = inputs.view(batch_size, 1, -1)
         inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
         labels = labels.cuda() if USE_CUDA else labels.cpu()
         outputs = net(inputs)
-        if net.dataset == net.TUT:
-            loss = tut_criterion(outputs, labels)
-        else:
-            loss = chime_criterion(outputs, labels)
-
+        loss = criterion(outputs, labels)
         loss_amount = loss.data.item()
         validation_loss.update(loss_amount)
         validation_accuracy.update(outputs, labels)
