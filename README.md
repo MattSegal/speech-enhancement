@@ -9,20 +9,23 @@ Code and concepts borrowed from [Francois Germain's repo](https://github.com/fra
 ## RUNS
 
 - A
-  small dataset, 1 feature layer, track MSE, see what 10 epochs achieves
+  small dataset (18 batches of 28), 1 feature layer, track MSE, see what 10 epochs achieves
   what does small dataset do?
   how well does MSE loss correspond to good audio output?
   is 1 top of stack feature vector enough for the loss function?
   then check model quality in notebook
 
   in general loss and MSE are both decreasing (which is good)
+  both training and validation loss / MSE are very similar (yay!)
+  improvement plateus at about about 12 epochs
+  ~0.95 loss
+  ~0.009 MSE
 
 - B
-  NONE
+  same as A but whole dataset (414 batches of 28)
 
 ## TODO
 
-- try g3 instances for a GPU that works
 - Look into raw audio tips
 - Try train a resnet / VGG on images to sanity check architecture
 - Try to reproduce an image denoising algo
