@@ -12,18 +12,20 @@ class SpeechDenoiseNet(nn.Module):
 
     def __init__(self):
         super().__init__()
-        # 256, 1, 32768
-        self.input_conv = ConvLayer(in_channels=1, out_channels=CHANNELS, dilation=1)
-        self.inner_convs = nn.Sequential(
-            *[
-                ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=2 ** i)
-                for i in range(1, NUM_INNER_CONVS + 1)
-            ]
+
+        input_conv = ConvLayer(in_channels=1, out_channels=CHANNELS, dilation=1)
+        inner_convs = [
+            ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=2 ** i)
+            for i in range(1, NUM_INNER_CONVS + 1)
+        ]
+        final_inner_conv = ConvLayer(
+            in_channels=CHANNELS, out_channels=CHANNELS, dilation=1
         )
-        self.final_inner_conv = ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=1)
-        # 256, 32, 32768
-        self.output_conv = nn.Conv1d(in_channels=CHANNELS, out_channels=1, kernel_size=1, bias=True)
-        # 256, 1, 32768
+        output_conv = nn.Conv1d(
+            in_channels=CHANNELS, out_channels=1, kernel_size=1, bias=True
+        )
+        conv_layers = [input_conv, *inner_convs, final_inner_conv, output_conv]
+        self.convs = nn.Sequential(*conv_layers)
 
     def forward(self, input_t):
         """
@@ -33,17 +35,7 @@ class SpeechDenoiseNet(nn.Module):
         batch_size = input_t.shape[0]
         assert input_t.shape[1] == 1
         audio_length = input_t.shape[2]
-        acts = self.input_conv(input_t)
-        assert acts.shape == (batch_size, CHANNELS, audio_length)
-        acts = self.inner_convs(acts)
-        assert acts.shape == (batch_size, CHANNELS, audio_length)
-        acts = self.final_inner_conv(acts)
-        assert acts.shape == (batch_size, CHANNELS, audio_length)
-        acts = self.output_conv(acts)
-        assert acts.shape == (batch_size, 1, audio_length)
-        acts = acts.squeeze(dim=1)
-        assert acts.shape == (batch_size, audio_length)
-        return acts
+        return self.convs(input_t).squeeze(dim=1)
 
 
 class ConvLayer(nn.Module):

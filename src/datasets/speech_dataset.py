@@ -21,21 +21,19 @@ class SpeechDataset(Dataset):
         print(f"Loading {dataset_label} dataset into memory.")
 
         print("Loading clean data...")
-        self.clean_data = [torch.tensor(np.random.randn(32767)).float() for _ in range(10)]
-        # self.clean_data = []
-        # self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
-        # self.clean_files = os.listdir(self.clean_folder)
-        # assert all([f.endswith(".wav") for f in self.clean_files])
-        # self.load_data(self.clean_files, self.clean_folder, self.clean_data)
+        self.clean_data = []
+        self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
+        self.clean_files = os.listdir(self.clean_folder)
+        assert all([f.endswith(".wav") for f in self.clean_files])
+        self.load_data(self.clean_files, self.clean_folder, self.clean_data)
 
         print("Loading noisy data...")
-        self.noisy_data = [torch.tensor(np.random.randn(32767)).float() for _ in range(10)]
-        # self.noisy_data = []
-        # self.noisy_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_noisy")
-        # self.noisy_files = os.listdir(self.noisy_folder)
-        # assert all([f.endswith(".wav") for f in self.noisy_files])
-        # assert len(self.noisy_files) == len(self.clean_files)
-        # self.load_data(self.noisy_files, self.noisy_folder, self.noisy_data)
+        self.noisy_data = []
+        self.noisy_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_noisy")
+        self.noisy_files = os.listdir(self.noisy_folder)
+        assert all([f.endswith(".wav") for f in self.noisy_files])
+        assert len(self.noisy_files) == len(self.clean_files)
+        self.load_data(self.noisy_files, self.noisy_folder, self.noisy_data)
 
         print("Done loading dataset into memory.")
 
@@ -48,7 +46,17 @@ class SpeechDataset(Dataset):
             sample_rate, wav_arr = wavfile.read(path)
             assert len(wav_arr.shape) == 1
             assert sample_rate == 16000
-            data.append(torch.tensor(wav_arr))
+            data.append(wav_arr)
+
+        # Ensure all sound samples are the same length
+        audio_length = 32767  # ~2s of data
+        for idx, wav_arr in enumerate(data):
+            if len(wav_arr) > audio_length:
+                # Shorten audio sample
+                data[idx] = subsample_chunk(wav_arr, audio_length)
+            elif len(wav_arr) < audio_length:
+                # Pad sample with zeros
+                data[idx] = pad_chunk(wav_arr, audio_length)
 
     def __len__(self):
         """
@@ -60,4 +68,27 @@ class SpeechDataset(Dataset):
         """
         Get item by integer index,
         """
-        return self.noisy_data[idx], self.clean_data[idx]
+        return torch.tensor(self.noisy_data[idx]), torch.tensor(self.clean_data[idx])
+
+
+def subsample_chunk(input_arr, chunk_width):
+    """
+    Randomly sample length of audio, so that it's always
+    the same size as all other samples (required for mini-batching)
+    """
+    assert chunk_width < len(input_arr)
+    chunk_start = np.random.randint(0, np.size(input_arr) - chunk_width + 1)
+    # Extract chunk from input
+    input_arr = input_arr[chunk_start : chunk_start + chunk_width]
+    return input_arr
+
+
+def pad_chunk(input_arr, chunk_width):
+    """
+    Pad sample length of audio, so that it's always
+    the same size as all other samples (required for mini-batching)
+    """
+    assert chunk_width > len(input_arr)
+    padding = chunk_width - input_arr.size
+    input_arr = np.pad(input_arr, (0, padding))
+    return input_arr

@@ -21,14 +21,21 @@ class AudioFeatureLoss:
         # create "features" method on loss net?
         _ = loss_net(predicted_audio)
         pred_feature_layers = loss_net.feature_layers
+        import pdb
+
+        pdb.set_trace()
         _ = loss_net(target_audio)
         target_feature_layers = loss_net.feature_layers
 
+        # There is also some sort of weighting applied to each layer.
+        # Skip this for now.
+        loss_weights = 1.0
+        # Sum up loss for each layer
         loss = 0
         for idx in range(len(pred_feature_layers)):
             predicted_feature = pred_feature_layers[idx]
             target_feature = target_feature_layers[idx]
-            loss += l1_loss(predicted_feature, target_feature)
+            loss += l1_loss(predicted_feature, target_feature) / loss_weights
 
         return torch.tensor([loss])
 

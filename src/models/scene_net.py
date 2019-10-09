@@ -58,6 +58,12 @@ class SceneNet(nn.Module):
             bias=True,
         )
 
+    def feature_layers(self):
+        """
+        Returns an array of internal activations
+        """
+        return []
+
     def forward(self, input_t):
         """
         Input has shape (batch_size, channels, audio,) 

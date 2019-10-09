@@ -16,13 +16,13 @@ from ..models.denoise_net import SpeechDenoiseNet
 from ..utils.moving_average import MovingAverage
 
 # TODO - find good metric for regression
-USE_CUDA = False
+USE_CUDA = True
 USE_WANDB = False
-NUM_EPOCHS = 100
+NUM_EPOCHS = 1
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
-BATCH_SIZE = 1
+BATCH_SIZE = 28  # The most the GPU can fit in memory.
 CHECKPOINT_DIR = "checkpoints"
 
 if USE_WANDB:
@@ -45,7 +45,9 @@ training_set = SpeechDataset(train=True)
 validation_set = SpeechDataset(train=False)
 
 # Construct data loaders
-training_data_loader = DataLoader(training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3)
+training_data_loader = DataLoader(
+    training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
+)
 validation_data_loader = DataLoader(
     validation_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=3
 )
@@ -56,7 +58,6 @@ if USE_WANDB:
     wandb.watch(net)
 
 # TODO - rig up loss function properly
-# https://app.wandb.ai/mattdsegal/chime-scene-net/runs/q0fe6k16
 criterion = nn.MSELoss()
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
@@ -108,7 +109,9 @@ for epoch in range(NUM_EPOCHS):
         inputs = inputs.view(batch_size, 1, -1)
         inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
         targets = targets.cuda() if USE_CUDA else targets.cpu()
-        outputs = net(inputs)
+        with torch.no_grad():
+            outputs = net(inputs)
+
         loss = criterion(outputs, targets)
         loss_amount = loss.data.item()
         validation_loss.update(loss_amount)
@@ -131,9 +134,9 @@ for epoch in range(NUM_EPOCHS):
 
 # Save model to disk
 if USE_WANDB:
-    checkpoint_filename = f"scene-net-{WANDB_NAME}-{int(time.time())}.ckpt"
+    checkpoint_filename = f"denoise-net-{WANDB_NAME}-{int(time.time())}.ckpt"
 else:
-    checkpoint_filename = f"scene-net-{int(time.time())}.ckpt"
+    checkpoint_filename = f"denoise-net-{int(time.time())}.ckpt"
 
 print(f"\nSaving checkpoint as {checkpoint_filename}\n")
 checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
