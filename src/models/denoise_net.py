@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+NUM_INNER_CONVS = 12
+CHANNELS = 32
 
 class SpeechDenoiseNet(nn.Module):
     """
@@ -8,28 +10,21 @@ class SpeechDenoiseNet(nn.Module):
     """
 
     def __init__(self):
-
-        ConvLayer(in_channels=1, out_channels=32, dilation=1)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**1)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**2)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**3)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**4)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**5)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**6)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**7)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**8)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**9)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**10)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**11)
-        ConvLayer(in_channels=32, out_channels=32, dilation=2**12)
-        ConvLayer(in_channels=32, out_channels=32, dilation=1)
-
-        self.final_conv = nn.Conv1d(
-            in_channels=32
+        # 256, 1, 32768
+        self.input_conv = ConvLayer(in_channels=1, out_channels=CHANNELS, dilation=1)
+        self.inner_convs = nn.Sequential(*[
+            ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=2**i)
+            for i in range(1, NUM_INNER_CONVS + 1)    
+        ])
+        self.final_inner_conv = self.ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=1)
+        # 256, 32, 32768
+        self.output_conv = nn.Conv1d(
+            in_channels=CHANNELS
             out_channels=1,
             kernel_size=1,
             bias=True,
         )
+        # 256, 1, 32768
 
 
     def forward(self, input_t):
@@ -37,24 +32,18 @@ class SpeechDenoiseNet(nn.Module):
         Input has shape (batch_size, 1, audio_length,) 
         Output has shape (batch_size, 1, audio_length,) 
         """
-
-        # Each intermediate layer is a 2-dimensional tensor of
-        # dimensionality N ×W, where W is the number of feature
-        # maps in each layer. (We set W = 64.)
-        # (batch_size, 64, audio_length,) ?
-
-        # The content of each intermediate layer is computed from
-        # the previous layer via a dilated convolution with
-        #  3 × 1 convolutional kernels [26] followed by an
-        #  adaptive normalization (see below) and a
-        # pointwise nonlinear leaky rectified linear unit (LReLU) [28]
-
-        # We zero-pad all layers so that
-        # their “effective” length is constant at N
-
-        # we increase the dilation factor exponentially with depth from 2^0
-        # for the 1st intermediate layer to 2^12 for the 13th one.
-        # We do not use dilation for the 14th and last one
+        batch_size = input_t.shape[0]
+        assert input_t.shape[1] == 1
+        audio_length = input_t.shape[2]
+        acts = self.input_conv(input_t)
+        assert input_t.shape == (batch_size, CHANNELS, audio_length)
+        acts = self.inner_convs(acts)
+        assert input_t.shape == (batch_size, CHANNELS, audio_length)
+        acts = self.final_inner_conv(acts)
+        assert input_t.shape == (batch_size, CHANNELS, audio_length)
+        acts = self.output_conv(acts)
+        assert input_t.shape == (batch_size, 1, audio_length)
+        return acts
 
 
 class ConvLayer(nn.Module):

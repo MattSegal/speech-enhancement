@@ -1,8 +1,5 @@
 """
 Training loop for acoustic scene classifier
-
-Training history available on Weights and Biases
-https://app.wandb.ai/mattdsegal/speech-denoising-deep-feature-loss-scene-net
 """
 import os
 import time
@@ -22,8 +19,8 @@ from ..utils.accuracy_tracker import AccuracyTracker, HammingLossTracker
 from ..utils.data_load import CombinedDataLoader
 
 USE_CUDA = True
-USE_WANDB = False
-NUM_EPOCHS = 100
+USE_WANDB = True
+NUM_EPOCHS = 50
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
@@ -180,10 +177,14 @@ for epoch in range(NUM_EPOCHS):
     if USE_WANDB:
         wandb.log(
             {
-                "Training Loss": training_loss.value,
-                "Validation Loss": validation_loss.value,
-                "Training Accuracy": training_accuracy.value,
-                "Validation Accuracy": validation_accuracy.value,
+                "CHiME Training Loss": chime_training_loss.value,
+                "CHiME Validation Loss": chime_validation_loss.value,
+                "CHiME Training Accuracy": chime_training_accuracy.value,
+                "CHiME Validation Accuracy": chime_validation_accuracy.value,
+                "TUT Training Loss": tut_training_loss.value,
+                "TUT Validation Loss": tut_validation_loss.value,
+                "TUT Training Accuracy": tut_training_accuracy.value,
+                "TUT Validation Accuracy": tut_validation_accuracy.value,
             }
         )
 
