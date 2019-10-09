@@ -87,12 +87,12 @@ tut_validation_loss = MovingAverage(decay=0.8)
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
     data_loader = CombinedDataLoader(chime_training_data_loader, tut_training_data_loader)
-
     num_samples = min([len(chime_training_set), len(tut_training_set)])
+    num_samples_validation = min([len(chime_validation_set), len(tut_validation_set)])
     chime_training_accuracy = HammingLossTracker(num_samples, 8)
     chime_validation_accuracy = HammingLossTracker(num_samples, 8)
-    tut_training_accuracy = AccuracyTracker(num_samples)
-    tut_validation_accuracy = AccuracyTracker(num_samples)
+    tut_training_accuracy = AccuracyTracker(num_samples_validation)
+    tut_validation_accuracy = AccuracyTracker(num_samples_validation)
 
     # Run training loop
     net.train()
