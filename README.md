@@ -6,6 +6,20 @@ Code and concepts borrowed from [Francois Germain's repo](https://github.com/fra
 
 **Status**: Currently trying to train the audio classifier network that is used for the loss function - training goes poorly.
 
+## RUNS
+
+- A
+  small dataset, 1 feature layer, track MSE, see what 10 epochs achieves
+  what does small dataset do?
+  how well does MSE loss correspond to good audio output?
+  is 1 top of stack feature vector enough for the loss function?
+  then check model quality in notebook
+
+  in general loss and MSE are both decreasing (which is good)
+
+- B
+  NONE
+
 ## TODO
 
 - try g3 instances for a GPU that works

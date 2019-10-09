@@ -20,7 +20,7 @@ from ..utils.feature_loss import AudioFeatureLoss
 # TODO - find good metric for regression
 USE_CUDA = True
 USE_WANDB = False
-NUM_EPOCHS = 50
+NUM_EPOCHS = 10
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
