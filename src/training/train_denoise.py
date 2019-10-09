@@ -20,7 +20,7 @@ from ..utils.feature_loss import AudioFeatureLoss
 # TODO - find good metric for regression
 USE_CUDA = True
 USE_WANDB = False
-NUM_EPOCHS = 1
+NUM_EPOCHS = 50
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
@@ -72,6 +72,9 @@ optimizer = optim.AdamW(
 # Keep track of loss history using moving average
 training_loss = MovingAverage(decay=0.8)
 validation_loss = MovingAverage(decay=0.8)
+mean_squared_error = nn.MSELoss()
+training_mse = MovingAverage(decay=0.8)
+validation_mse = MovingAverage(decay=0.8)
 
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
@@ -104,37 +107,40 @@ for epoch in range(NUM_EPOCHS):
         optimizer.step()
 
         # Track training information
+        mse = mean_squared_error(outputs, targets).data.item()
+        training_mse.update(mse)
         loss_amount = loss.data.item()
         training_loss.update(loss_amount)
 
     # Check performance (loss) on validation set.
     net.eval()
-    for inputs, targets in tqdm(validation_data_loader):
-        batch_size = inputs.shape[0]
-        audio_length = inputs.shape[1]
-        inputs = inputs.view(batch_size, 1, -1)
-        inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
-        targets = targets.cuda() if USE_CUDA else targets.cpu()
-        with torch.no_grad():
+    with torch.no_grad():
+        for inputs, targets in tqdm(validation_data_loader):
+            batch_size = inputs.shape[0]
+            audio_length = inputs.shape[1]
+            inputs = inputs.view(batch_size, 1, -1)
+            inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
+            targets = targets.cuda() if USE_CUDA else targets.cpu()
             outputs = net(inputs)
-
-        loss = criterion(outputs, targets)
-        loss_amount = loss.data.item()
-        validation_loss.update(loss_amount)
+            loss = criterion(outputs, targets)
+            loss_amount = loss.data.item()
+            validation_loss.update(loss_amount)
+            mse = mean_squared_error(outputs, targets).data.item()
+            validation_mse.update(mse)
 
     # Log training information
     print(f"\n\tTraining loss:       {training_loss.value:0.4f}")
     print(f"\tValidation loss:     {validation_loss.value:0.4f}")
-    # print(f"\tTraining accuracy:   {training_accuracy.value:0.2f}")
-    # print(f"\tValidation accuracy: {validation_accuracy.value:0.2f}")
+    print(f"\tTraining MSE:   {training_mse.value:0.2f}")
+    print(f"\tValidation MSE: {validation_mse.value:0.2f}")
 
     if USE_WANDB:
         wandb.log(
             {
                 "Training Loss": training_loss.value,
                 "Validation Loss": validation_loss.value,
-                # "Training Accuracy": training_accuracy.value,
-                # "Validation Accuracy": validation_accuracy.value,
+                "Training MSE": training_mse.value,
+                "Validation MSE": validation_mse.value,
             }
         )
 

@@ -36,6 +36,7 @@ class SceneNet(nn.Module):
 
     def __init__(self):
         super().__init__()
+        self.feature_layers = []
         conv_layers = [
             ConvLayer(in_channels, out_channels, stride=stride)
             for in_channels, out_channels, stride in CONV_LAYERS
@@ -58,19 +59,14 @@ class SceneNet(nn.Module):
             bias=True,
         )
 
-    def feature_layers(self):
-        """
-        Returns an array of internal activations
-        """
-        # https://gist.github.com/Tushar-N/680633ec18f5cb4b47933da7d10902af
-        return []
-
     def forward(self, input_t):
         """
         Input has shape (batch_size, channels, audio,) 
         """
-        batch_size = input_t.shape[0]
+        # Reset feature layers
+        self.feature_layers = []
         # Convolutional filter expects a 3D input
+        batch_size = input_t.shape[0]
         assert len(input_t.shape) == 3  # batch_size, channels, audio
         assert input_t.shape[1] == 1  # only 1 channel initially
         assert input_t.shape[2] >= MIN_SAMPLES  # Receptive field minimum
@@ -85,6 +81,9 @@ class SceneNet(nn.Module):
         pooled_acts = torch.mean(conv_acts, dim=2, keepdim=True)
         # (batch_size, num_channels)
         # torch.Size([256, 128, 1])
+
+        # Add 128 top level features to feature layers
+        self.feature_layers.append(pooled_acts.squeeze(dim=2))
 
         if self.dataset == self.TUT:
             # Pool channels with 1x1 convolution
