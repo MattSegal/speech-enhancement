@@ -30,7 +30,7 @@ class CombinedDataLoader:
                 return sample
             except StopIteration:
                 self.a_finished = False
-        else:
+        elif self.a_finished or not self.is_loader_a:
             try:
                 sample = next(self.iter_b)
                 return sample
