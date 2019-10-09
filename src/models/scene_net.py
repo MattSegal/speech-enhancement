@@ -62,6 +62,7 @@ class SceneNet(nn.Module):
         """
         Returns an array of internal activations
         """
+        # https://gist.github.com/Tushar-N/680633ec18f5cb4b47933da7d10902af
         return []
 
     def forward(self, input_t):

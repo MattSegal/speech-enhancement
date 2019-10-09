@@ -18,14 +18,19 @@ class AudioFeatureLoss:
             predicted_audio is a tensor (batch_size, audio_length)
             target_audio is a tensor (batch_size, audio_length)
         """
+        assert predicted_audio.shape == target_audio.shape
+        batch_size = predicted_audio.shape[0]
+        predict_input = predicted_audio.view(batch_size, 1, -1)
+        target_input = target_audio.view(batch_size, 1, -1)
+
         # create "features" method on loss net?
-        _ = loss_net(predicted_audio)
-        pred_feature_layers = loss_net.feature_layers
+        _ = self.loss_net(predict_input)
+        pred_feature_layers = self.loss_net.feature_layers
         import pdb
 
         pdb.set_trace()
-        _ = loss_net(target_audio)
-        target_feature_layers = loss_net.feature_layers
+        _ = self.loss_net(target_input)
+        target_feature_layers = self.loss_net.feature_layers
 
         # There is also some sort of weighting applied to each layer.
         # Skip this for now.

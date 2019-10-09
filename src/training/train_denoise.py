@@ -13,7 +13,9 @@ import wandb
 
 from ..datasets.speech_dataset import SpeechDataset
 from ..models.denoise_net import SpeechDenoiseNet
+from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
+from ..utils.feature_loss import AudioFeatureLoss
 
 # TODO - find good metric for regression
 USE_CUDA = True
@@ -24,6 +26,7 @@ ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
 BATCH_SIZE = 28  # The most the GPU can fit in memory.
 CHECKPOINT_DIR = "checkpoints"
+LOSS_NET_CHECKPOINT = "checkpoints/scene-net-loss.ckpt"
 
 if USE_WANDB:
     WANDB_NAME = input("What do you want to call this run: ")
@@ -57,8 +60,11 @@ net = SpeechDenoiseNet().cuda() if USE_CUDA else SpeechDenoiseNet().cpu()
 if USE_WANDB:
     wandb.watch(net)
 
-# TODO - rig up loss function properly
-criterion = nn.MSELoss()
+# Initialize loss function, optimizer
+loss_net = SceneNet().cuda()
+loss_net.load_state_dict(torch.load(LOSS_NET_CHECKPOINT))
+loss_net.eval()
+criterion = AudioFeatureLoss(loss_net)
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )

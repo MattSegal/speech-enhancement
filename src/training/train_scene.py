@@ -29,7 +29,6 @@ CHECKPOINT_DIR = "checkpoints"
 
 if USE_WANDB:
     WANDB_NAME = input("What do you want to call this run: ")
-    # WANDB_PROJECT = "speech-denoising-deep-feature-loss-scene-net"
     WANDB_PROJECT = "chime-scene-net"
     wandb.init(
         name=WANDB_NAME or None,
@@ -83,9 +82,13 @@ tut_validation_loss = MovingAverage(decay=0.8)
 
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
-    data_loader = CombinedDataLoader(chime_training_data_loader, tut_training_data_loader)
+    data_loader = CombinedDataLoader(
+        chime_training_data_loader, tut_training_data_loader
+    )
     num_samples = min([len(chime_training_set), len(tut_training_set)])
-    num_samples_validation = min([len(chime_validation_set), len(tut_validation_set)])
+    num_samples_validation = min(
+        [len(chime_validation_set), len(tut_validation_set)]
+    )
     chime_training_accuracy = HammingLossTracker(num_samples, 8)
     tut_training_accuracy = AccuracyTracker(num_samples)
     chime_validation_accuracy = HammingLossTracker(num_samples_validation, 8)
@@ -120,7 +123,9 @@ for epoch in range(NUM_EPOCHS):
 
         # Run loss function on over the model's prediction
         labels = labels.cuda() if USE_CUDA else labels.cpu()
-        expect_labels_shape = (batch_size, net.num_labels) if use_chime else (batch_size,)
+        expect_labels_shape = (
+            (batch_size, net.num_labels) if use_chime else (batch_size,)
+        )
         assert labels.shape == expect_labels_shape
         loss = criterion(outputs, labels)
 
@@ -136,7 +141,9 @@ for epoch in range(NUM_EPOCHS):
         training_accuracy.update(outputs, labels)
 
     # Check performance (loss, accurancy) on validation set.
-    data_loader = CombinedDataLoader(chime_validation_data_loader, tut_validation_data_loader)
+    data_loader = CombinedDataLoader(
+        chime_validation_data_loader, tut_validation_data_loader
+    )
     net.eval()
     for inputs, labels in tqdm(data_loader):
         use_chime = data_loader.is_loader_a
