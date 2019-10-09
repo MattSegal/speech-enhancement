@@ -90,8 +90,8 @@ for epoch in range(NUM_EPOCHS):
     num_samples = min([len(chime_training_set), len(tut_training_set)])
     num_samples_validation = min([len(chime_validation_set), len(tut_validation_set)])
     chime_training_accuracy = HammingLossTracker(num_samples, 8)
-    chime_validation_accuracy = HammingLossTracker(num_samples, 8)
-    tut_training_accuracy = AccuracyTracker(num_samples_validation)
+    tut_training_accuracy = AccuracyTracker(num_samples)
+    chime_validation_accuracy = HammingLossTracker(num_samples_validation, 8)
     tut_validation_accuracy = AccuracyTracker(num_samples_validation)
 
     # Run training loop
