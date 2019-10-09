@@ -131,8 +131,8 @@ for epoch in range(NUM_EPOCHS):
     # Log training information
     print(f"\n\tTraining loss:       {training_loss.value:0.4f}")
     print(f"\tValidation loss:     {validation_loss.value:0.4f}")
-    print(f"\tTraining MSE:   {training_mse.value:0.2f}")
-    print(f"\tValidation MSE: {validation_mse.value:0.2f}")
+    print(f"\tTraining MSE:        {training_mse.value:0.4f}")
+    print(f"\tValidation MSE:      {validation_mse.value:0.4f}")
 
     if USE_WANDB:
         wandb.log(

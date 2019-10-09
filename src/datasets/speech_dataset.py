@@ -62,7 +62,7 @@ class SpeechDataset(Dataset):
         """
         How many samples there are in the dataset.
         """
-        return len(self.noisy_data)
+        return min([len(self.noisy_data), 500])
 
     def __getitem__(self, idx):
         """
