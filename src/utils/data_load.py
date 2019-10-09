@@ -16,8 +16,8 @@ class CombinedDataLoader:
 
     def __iter__(self):
         self.count = -1
-        self.iter_a = loader_a.__iter__()
-        self.iter_b = loader_b.__iter__()
+        self.iter_a = self.loader_a.__iter__()
+        self.iter_b = self.loader_b.__iter__()
         return self
 
     def __next__(self):
