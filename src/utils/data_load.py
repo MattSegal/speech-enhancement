@@ -24,7 +24,7 @@ class CombinedDataLoader:
 
     def __next__(self):
         self.count += 1
-        if self.is_loader_a:
+        if self.is_loader_a and not self.a_finished:
             try:
                 sample = next(self.iter_a)
                 return sample
