@@ -16,13 +16,13 @@ from ..models.denoise_net import SpeechDenoiseNet
 from ..utils.moving_average import MovingAverage
 
 # TODO - find good metric for regression
-USE_CUDA = True
+USE_CUDA = False
 USE_WANDB = False
 NUM_EPOCHS = 100
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
-BATCH_SIZE = 64
+BATCH_SIZE = 1
 CHECKPOINT_DIR = "checkpoints"
 
 if USE_WANDB:
@@ -51,12 +51,13 @@ validation_data_loader = DataLoader(
 )
 
 # Initialize model
-net = SceneNet().cuda() if USE_CUDA else SceneNet().cpu()
+net = SpeechDenoiseNet().cuda() if USE_CUDA else SpeechDenoiseNet().cpu()
 if USE_WANDB:
     wandb.watch(net)
 
 # TODO - rig up loss function properly
-# criterion = nn.CrossEntropyLoss()
+# https://app.wandb.ai/mattdsegal/chime-scene-net/runs/q0fe6k16
+criterion = nn.MSELoss()
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
@@ -82,11 +83,11 @@ for epoch in range(NUM_EPOCHS):
         # Get a prediction from the model
         inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
         outputs = net(inputs)
-        assert outputs.shape == (batch_size, 1, audio_length)
+        assert outputs.shape == (batch_size, audio_length)
 
         # Run loss function on over the model's prediction
         targets = targets.cuda() if USE_CUDA else targets.cpu()
-        assert targets.shape == (batch_size, 1, audio_length)
+        assert targets.shape == (batch_size, audio_length)
         loss = criterion(outputs, targets)
 
         # Calculate model weight gradients from the loss
@@ -115,16 +116,16 @@ for epoch in range(NUM_EPOCHS):
     # Log training information
     print(f"\n\tTraining loss:       {training_loss.value:0.4f}")
     print(f"\tValidation loss:     {validation_loss.value:0.4f}")
-    print(f"\tTraining accuracy:   {training_accuracy.value:0.2f}")
-    print(f"\tValidation accuracy: {validation_accuracy.value:0.2f}")
+    # print(f"\tTraining accuracy:   {training_accuracy.value:0.2f}")
+    # print(f"\tValidation accuracy: {validation_accuracy.value:0.2f}")
 
     if USE_WANDB:
         wandb.log(
             {
                 "Training Loss": training_loss.value,
                 "Validation Loss": validation_loss.value,
-                "Training Accuracy": training_accuracy.value,
-                "Validation Accuracy": validation_accuracy.value,
+                # "Training Accuracy": training_accuracy.value,
+                # "Validation Accuracy": validation_accuracy.value,
             }
         )
 

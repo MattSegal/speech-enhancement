@@ -4,28 +4,26 @@ import torch.nn as nn
 NUM_INNER_CONVS = 12
 CHANNELS = 32
 
+
 class SpeechDenoiseNet(nn.Module):
     """
     Convolutional network used to denoise human speech in audio.
     """
 
     def __init__(self):
+        super().__init__()
         # 256, 1, 32768
         self.input_conv = ConvLayer(in_channels=1, out_channels=CHANNELS, dilation=1)
-        self.inner_convs = nn.Sequential(*[
-            ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=2**i)
-            for i in range(1, NUM_INNER_CONVS + 1)    
-        ])
-        self.final_inner_conv = self.ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=1)
-        # 256, 32, 32768
-        self.output_conv = nn.Conv1d(
-            in_channels=CHANNELS
-            out_channels=1,
-            kernel_size=1,
-            bias=True,
+        self.inner_convs = nn.Sequential(
+            *[
+                ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=2 ** i)
+                for i in range(1, NUM_INNER_CONVS + 1)
+            ]
         )
+        self.final_inner_conv = ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=1)
+        # 256, 32, 32768
+        self.output_conv = nn.Conv1d(in_channels=CHANNELS, out_channels=1, kernel_size=1, bias=True)
         # 256, 1, 32768
-
 
     def forward(self, input_t):
         """
@@ -36,13 +34,15 @@ class SpeechDenoiseNet(nn.Module):
         assert input_t.shape[1] == 1
         audio_length = input_t.shape[2]
         acts = self.input_conv(input_t)
-        assert input_t.shape == (batch_size, CHANNELS, audio_length)
+        assert acts.shape == (batch_size, CHANNELS, audio_length)
         acts = self.inner_convs(acts)
-        assert input_t.shape == (batch_size, CHANNELS, audio_length)
+        assert acts.shape == (batch_size, CHANNELS, audio_length)
         acts = self.final_inner_conv(acts)
-        assert input_t.shape == (batch_size, CHANNELS, audio_length)
+        assert acts.shape == (batch_size, CHANNELS, audio_length)
         acts = self.output_conv(acts)
-        assert input_t.shape == (batch_size, 1, audio_length)
+        assert acts.shape == (batch_size, 1, audio_length)
+        acts = acts.squeeze(dim=1)
+        assert acts.shape == (batch_size, audio_length)
         return acts
 
 
@@ -68,7 +68,7 @@ class ConvLayer(nn.Module):
             out_channels=out_channels,
             dilation=dilation,
             kernel_size=3,
-            padding=1,  # Need to check how this interacts with dilation
+            padding=dilation,  # Need to check how this interacts with dilation
             bias=False,  # No bias when using batch norm
         )
         self.lrelu = nn.LeakyReLU(negative_slope=0.2)
