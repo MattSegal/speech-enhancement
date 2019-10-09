@@ -23,11 +23,11 @@ from ..utils.data_load import CombinedDataLoader
 
 USE_CUDA = True
 USE_WANDB = False
-NUM_EPOCHS = 50
+NUM_EPOCHS = 100
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 CHECKPOINT_DIR = "checkpoints"
 
 if USE_WANDB:
@@ -88,10 +88,11 @@ for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
     data_loader = CombinedDataLoader(chime_training_data_loader, tut_training_data_loader)
 
-    chime_training_accuracy = HammingLossTracker(len(chime_training_set), 8)
-    chime_validation_accuracy = HammingLossTracker(len(chime_validation_set), 8)
-    tut_training_accuracy = AccuracyTracker(len(tut_training_set))
-    tut_validation_accuracy = AccuracyTracker(len(tut_validation_set))
+    num_samples = min([len(chime_training_set), len(tut_training_set)])
+    chime_training_accuracy = HammingLossTracker(num_samples, 8)
+    chime_validation_accuracy = HammingLossTracker(num_samples, 8)
+    tut_training_accuracy = AccuracyTracker(num_samples)
+    tut_validation_accuracy = AccuracyTracker(num_samples)
 
     # Run training loop
     net.train()
