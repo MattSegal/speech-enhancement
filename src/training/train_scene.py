@@ -20,7 +20,7 @@ from ..utils.data_load import CombinedDataLoader
 
 USE_CUDA = True
 USE_WANDB = True
-NUM_EPOCHS = 50
+NUM_EPOCHS = 100
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2

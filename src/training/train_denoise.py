@@ -17,16 +17,18 @@ from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
 from ..utils.feature_loss import AudioFeatureLoss
 
-# TODO - find good metric for regression
-USE_CUDA = True
 USE_WANDB = True
-NUM_EPOCHS = 12
+USE_CUDA = True
+NUM_EPOCHS = 25
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
 BATCH_SIZE = 28  # The most the GPU can fit in memory.
 CHECKPOINT_DIR = "checkpoints"
-LOSS_NET_CHECKPOINT = "checkpoints/scene-net-loss.ckpt"
+# LOSS_NET_CHECKPOINT = "checkpoints/scene-net-loss.ckpt"
+LOSS_NET_CHECKPOINT = (
+    "checkpoints/scene-net-denoiser-loss-split-up-conv-layers-2-1570666708.ckpt"
+)
 
 if USE_WANDB:
     WANDB_NAME = input("What do you want to call this run: ")
@@ -52,7 +54,7 @@ training_data_loader = DataLoader(
     training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
 )
 validation_data_loader = DataLoader(
-    validation_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=3
+    validation_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
 )
 
 # Initialize model

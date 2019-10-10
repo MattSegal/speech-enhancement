@@ -33,15 +33,17 @@ class AudioFeatureLoss:
         _ = self.loss_net(target_input)
         target_feature_layers = self.loss_net.feature_layers
 
-        # There is also some sort of weighting applied to each layer.
-        # Skip this for now.
-        loss_weights = 1.0
-        # Sum up loss for each layer
+        [z.size() for z in target_feature_layers]
+
+        # Sum up loss for each layer, normalized by layer size.
+        min_size = min([sum(l.size()) for l in pred_feature_layers])
         loss = torch.tensor([0.0], requires_grad=True).cuda()
         for idx in range(len(pred_feature_layers)):
             predicted_feature = pred_feature_layers[idx]
             target_feature = target_feature_layers[idx]
-            loss[0] += l1_loss(predicted_feature, target_feature) / loss_weights
+            size = sum(predicted_feature.size())
+            weight = size / min_size
+            loss[0] += l1_loss(predicted_feature, target_feature) / weight
 
         return loss
 
@@ -54,6 +56,6 @@ def l1_loss(predicted_t, target_t):
     Assume both input tensors have shape (batch_size, audio_length)
     """
     assert predicted_t.shape == target_t.shape
-    assert len(predicted_t.shape) == 2
+    assert len(predicted_t.shape) > 1
     diff_t = predicted_t - target_t
     return diff_t.abs().mean()

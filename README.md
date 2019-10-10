@@ -8,7 +8,7 @@ Code and concepts borrowed from [Francois Germain's repo](https://github.com/fra
 
 ## RUNS
 
-- A
+- A1
   small dataset (18 batches of 28), 1 feature layer, track MSE, see what 10 epochs achieves
   what does small dataset do?
   how well does MSE loss correspond to good audio output?
@@ -21,8 +21,11 @@ Code and concepts borrowed from [Francois Germain's repo](https://github.com/fra
   ~0.95 loss
   ~0.009 MSE
 
-- B
+- B1
   same as A but whole dataset (414 batches of 28)
+  slightly better than A1 but not so different
+
+- A2 try 12 epochs with pre-pooling feature layer
 
 ## TODO
 

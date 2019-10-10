@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 
-# NUM_INNER_CONVS = 12
-NUM_INNER_CONVS = 10
-CHANNELS = 32
+# NUM_INNER_CONVS = 10
+# CHANNELS = 32
+NUM_INNER_CONVS = 4
+CHANNELS = 64
 
 
 class SpeechDenoiseNet(nn.Module):

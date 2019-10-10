@@ -9,7 +9,7 @@ CONV_LAYERS = [
     [32, 32, 2],
     [32, 32, 2],
     [32, 32, 2],
-    [32, 32, 2],
+    [32, 32, 2],  # Activations used for feature layer
     [32, 64, 2],
     [64, 64, 2],
     [64, 64, 2],
@@ -21,6 +21,7 @@ CONV_LAYERS = [
     [128, 128, 2],
     [128, 128, 1],
 ]
+CONV_ACT_SAMPLE_IDXS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
 
 
 class SceneNet(nn.Module):
@@ -36,12 +37,18 @@ class SceneNet(nn.Module):
 
     def __init__(self):
         super().__init__()
+        # Initializer feature layers, used for the denoiser loss function.
         self.feature_layers = []
-        conv_layers = [
-            ConvLayer(in_channels, out_channels, stride=stride)
-            for in_channels, out_channels, stride in CONV_LAYERS
-        ]
-        self.conv = nn.Sequential(*conv_layers)
+        # Create internal convolution layers, for feature extraction.
+        layer_idx = 0
+        self.conv_layers = []
+        for in_channels, out_channels, stride in CONV_LAYERS:
+            layer_idx += 1
+            layer_name = f"conv_{layer_idx}"
+            conv_layer = ConvLayer(in_channels, out_channels, stride=stride)
+            self.conv_layers.append(conv_layer)
+            setattr(self, layer_name, conv_layer)
+
         # Used for TUT dataset classfication
         self.softmax = nn.LogSoftmax(dim=1)
         self.tut_conv = nn.Conv1d(
@@ -74,16 +81,20 @@ class SceneNet(nn.Module):
         # Pass input through a series of 1D covolutions
         # (batch_size, channels, length)
         # torch.Size([256, 1, 32767+])
-        conv_acts = self.conv(input_t)
-        # torch.Size([256, 128, 2+])
+        conv_acts = input_t
+        for idx, conv_layer in enumerate(self.conv_layers):
+            conv_acts = conv_layer(conv_acts)
+            if idx in CONV_ACT_SAMPLE_IDXS:
+                self.feature_layers.append(conv_acts)
 
+        # torch.Size([256, 128, 2+])
         # Perform average pooling over features to produce a standard 1D feature vector.
         pooled_acts = torch.mean(conv_acts, dim=2, keepdim=True)
+        # self.feature_layers.append(pooled_acts.squeeze(dim=2))
         # (batch_size, num_channels)
         # torch.Size([256, 128, 1])
 
         # Add 128 top level features to feature layers
-        self.feature_layers.append(pooled_acts.squeeze(dim=2))
 
         if self.dataset == self.TUT:
             # Pool channels with 1x1 convolution
