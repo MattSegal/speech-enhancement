@@ -17,9 +17,9 @@ from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
 from ..utils.feature_loss import AudioFeatureLoss
 
-USE_WANDB = True
+USE_WANDB = False
 USE_CUDA = True
-NUM_EPOCHS = 25
+NUM_EPOCHS = 8
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2

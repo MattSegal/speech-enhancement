@@ -36,6 +36,8 @@ class AudioFeatureLoss:
         [z.size() for z in target_feature_layers]
 
         # Sum up loss for each layer, normalized by layer size.
+        # TODO: Normalize each layer's loss by its running mean after some
+        #       warm-up period.
         min_size = min([sum(l.size()) for l in pred_feature_layers])
         loss = torch.tensor([0.0], requires_grad=True).cuda()
         for idx in range(len(pred_feature_layers)):

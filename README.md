@@ -29,6 +29,10 @@ Code and concepts borrowed from [Francois Germain's repo](https://github.com/fra
 
 ## TODO
 
+- Turn off weight decay, see what happens (nothing much)
+- Try this moving loss function feature weights thing
+- Try gradient checkpointing then make the model 2x bigger
+  https://github.com/prigoyal/pytorch_memonger/blob/master/tutorial/Checkpointing_for_PyTorch_models.ipynb
 - Look into raw audio tips
 - Try train a resnet / VGG on images to sanity check architecture
 - Try to reproduce an image denoising algo
