@@ -19,7 +19,7 @@ from ..utils.feature_loss import AudioFeatureLoss
 
 USE_WANDB = False
 USE_CUDA = True
-NUM_EPOCHS = 3
+NUM_EPOCHS = 10
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 # WEIGHT_DECAY = 1e-2
@@ -48,9 +48,15 @@ if USE_WANDB:
 
 # Load datasets
 training_set = SpeechDataset(train=True)
-training_set.noisy_data = training_set.clean_data
+clean = []
+noisy = []
+for _ in range(5):
+    clean = [*training_set.clean_data, *clean]
+    noisy = [*training_set.noisy_data, *noisy]
+
+training_set.clean_data = clean
+training_set.noisy_data = noisy
 validation_set = SpeechDataset(train=False)
-validation_set.noisy_data = validation_set.clean_data
 
 # Construct data loaders
 training_data_loader = DataLoader(

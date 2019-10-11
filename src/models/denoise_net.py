@@ -8,8 +8,8 @@ from torch.utils.checkpoint import checkpoint_sequential
 # 16s / 5 /500 / 48 / ~6GB
 # 16s / 6 /500 / 32 / ~6GB
 
-GRAD_CHECKPOINT_SEGMENTS = 5
-NUM_INNER_CONVS = 12
+GRAD_CHECKPOINT_SEGMENTS = 2
+NUM_INNER_CONVS = 8
 CHANNELS = 64
 
 
@@ -46,6 +46,7 @@ class SpeechDenoiseNet(nn.Module):
         # Use gradient checkpointing to save GPU memory.
         modules = [m for m in self.convs._modules.values()]
         conv_t = checkpoint_sequential(modules, GRAD_CHECKPOINT_SEGMENTS, input_t)
+        # conv_t = self.convs(input_t)
         return conv_t.squeeze(dim=1)
 
 
@@ -62,22 +63,29 @@ class ConvLayer(nn.Module):
             in_channels: number of input channels to be convoluted
             out_channels: number of output channels to be produced
 
+        Padding is configured so that the input and output sizes are the same.
+        From the PyTorch docs for Conv1d: https://pytorch.org/docs/stable/nn.html#conv1d
+        L_out = floor([L_in + 2 * padding - (kernel_size - 1) * dilation - 1] / stride + 1)
+        with stride = 1 and kernel_size = 3
+        L_out = L_in + 2 * padding - 2 * dilation * 2 - 1 + 1
+        set L_out = L_in
+        0 = 2 * padding - 2 * dilation
+        padding = dilation 
         """
         super().__init__()
-        # Configure padding so the input and output sizes are the same.
-        # You could just do the padding manually with pytorch
         self.conv = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
             dilation=dilation,
+            padding=dilation,  # Equivalent to 'same' in TensorFlow, given a stride of 1.
             kernel_size=3,
-            padding=dilation,  # Need to check how this interacts with dilation
             bias=False,  # No bias when using batch norm
         )
+
         self.lrelu = nn.LeakyReLU(negative_slope=0.2)
         self.batch_norm = nn.BatchNorm1d(num_features=out_channels)
         # Apply Kaiming initialization to convolutional weights
-        nn.init.kaiming_normal_(self.conv.weight)
+        nn.init.kaiming_normal_(self.conv.weight, a=0.2)
         # Adaptive norm parameters
         self.adapt_alpha = nn.Parameter(torch.tensor([1.0]))
         self.adapt_beta = nn.Parameter(torch.tensor([0.0]))
@@ -88,6 +96,7 @@ class ConvLayer(nn.Module):
         """
         conv_t = self.conv(input_t)
         relu_t = self.lrelu(conv_t)
+        # return relu_t
         norm_t = self.batch_norm(relu_t)
         # Apply adaptive normalization (Fast Image Processing with Fully-Convolutional Networks)
         adapt_t = self.adapt_alpha * relu_t + self.adapt_beta * norm_t

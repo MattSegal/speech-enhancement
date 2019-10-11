@@ -8,6 +8,9 @@ from scipy.io import wavfile
 
 DATA_PATH = "data/"
 
+MAX_SAMPLES = 32
+MAX_AUDIO_LENGTH = 32767  # ~2s of data
+
 
 class SpeechDataset(Dataset):
     """
@@ -23,7 +26,8 @@ class SpeechDataset(Dataset):
         print("Loading clean data...")
         self.clean_data = []
         self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
-        self.clean_files = os.listdir(self.clean_folder)
+        # HACK - LIMIT TO 1 BATCH
+        self.clean_files = os.listdir(self.clean_folder)[:MAX_SAMPLES]
         assert all([f.endswith(".wav") for f in self.clean_files])
         self.load_data(self.clean_files, self.clean_folder, self.clean_data)
 
@@ -31,6 +35,8 @@ class SpeechDataset(Dataset):
         self.noisy_data = []
         self.noisy_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_noisy")
         self.noisy_files = os.listdir(self.noisy_folder)
+        # HACK - limit to 1 batch
+        self.noisy_files = [f for f in self.noisy_files if f in self.clean_files]
         assert all([f.endswith(".wav") for f in self.noisy_files])
         assert len(self.noisy_files) == len(self.clean_files)
         self.load_data(self.noisy_files, self.noisy_folder, self.noisy_data)
@@ -49,14 +55,13 @@ class SpeechDataset(Dataset):
             data.append(wav_arr)
 
         # Ensure all sound samples are the same length
-        audio_length = 32767  # ~2s of data
         for idx, wav_arr in enumerate(data):
-            if len(wav_arr) > audio_length:
+            if len(wav_arr) > MAX_AUDIO_LENGTH:
                 # Shorten audio sample
-                data[idx] = subsample_chunk(wav_arr, audio_length)
-            elif len(wav_arr) < audio_length:
+                data[idx] = subsample_chunk(wav_arr, MAX_AUDIO_LENGTH)
+            elif len(wav_arr) < MAX_AUDIO_LENGTH:
                 # Pad sample with zeros
-                data[idx] = pad_chunk(wav_arr, audio_length)
+                data[idx] = pad_chunk(wav_arr, MAX_AUDIO_LENGTH)
 
     def __len__(self):
         """
