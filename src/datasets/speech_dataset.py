@@ -63,7 +63,7 @@ class SpeechDataset(Dataset):
         How many samples there are in the dataset.
         """
         # return len(self.noisy_data)
-        return min([len(self.noisy_data), 500])
+        return min([len(self.noisy_data), 3000])
 
     def __getitem__(self, idx):
         """
@@ -74,13 +74,11 @@ class SpeechDataset(Dataset):
 
 def subsample_chunk(input_arr, chunk_width):
     """
-    Randomly sample length of audio, so that it's always
+    Sample a length of audio, so that it's always
     the same size as all other samples (required for mini-batching)
     """
     assert chunk_width < len(input_arr)
-    chunk_start = np.random.randint(0, np.size(input_arr) - chunk_width + 1)
-    # Extract chunk from input
-    input_arr = input_arr[chunk_start : chunk_start + chunk_width]
+    input_arr = input_arr[:chunk_width]
     return input_arr
 
 
@@ -93,3 +91,17 @@ def pad_chunk(input_arr, chunk_width):
     padding = chunk_width - input_arr.size
     input_arr = np.pad(input_arr, (0, padding))
     return input_arr
+
+
+def subsample_chunk_random(input_arr, chunk_width):
+    """
+    NOT USED
+    Randomly sample length of audio, so that it's always
+    the same size as all other samples (required for mini-batching)
+    """
+    assert chunk_width < len(input_arr)
+    chunk_start = np.random.randint(0, np.size(input_arr) - chunk_width + 1)
+    # Extract chunk from input
+    input_arr = input_arr[chunk_start : chunk_start + chunk_width]
+    return input_arr
+

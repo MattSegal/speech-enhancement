@@ -19,11 +19,12 @@ from ..utils.feature_loss import AudioFeatureLoss
 
 USE_WANDB = False
 USE_CUDA = True
-NUM_EPOCHS = 8
+NUM_EPOCHS = 3
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
-WEIGHT_DECAY = 1e-2
-BATCH_SIZE = 28  # The most the GPU can fit in memory.
+# WEIGHT_DECAY = 1e-2
+WEIGHT_DECAY = 0
+BATCH_SIZE = 32
 CHECKPOINT_DIR = "checkpoints"
 # LOSS_NET_CHECKPOINT = "checkpoints/scene-net-loss.ckpt"
 LOSS_NET_CHECKPOINT = (
@@ -47,7 +48,9 @@ if USE_WANDB:
 
 # Load datasets
 training_set = SpeechDataset(train=True)
+training_set.noisy_data = training_set.clean_data
 validation_set = SpeechDataset(train=False)
+validation_set.noisy_data = validation_set.clean_data
 
 # Construct data loaders
 training_data_loader = DataLoader(
@@ -67,6 +70,7 @@ loss_net = SceneNet().cuda()
 loss_net.load_state_dict(torch.load(LOSS_NET_CHECKPOINT))
 loss_net.eval()
 criterion = AudioFeatureLoss(loss_net)
+# criterion = nn.MSELoss()
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
@@ -74,6 +78,7 @@ optimizer = optim.AdamW(
 # Keep track of loss history using moving average
 training_loss = MovingAverage(decay=0.8)
 validation_loss = MovingAverage(decay=0.8)
+# Baseline of ~0.01 for no change, ~1 for random noise.
 mean_squared_error = nn.MSELoss()
 training_mse = MovingAverage(decay=0.8)
 validation_mse = MovingAverage(decay=0.8)

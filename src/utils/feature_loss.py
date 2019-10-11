@@ -44,7 +44,7 @@ class AudioFeatureLoss:
             predicted_feature = pred_feature_layers[idx]
             target_feature = target_feature_layers[idx]
             size = sum(predicted_feature.size())
-            weight = size / min_size
+            weight = 1.0
             loss[0] += l1_loss(predicted_feature, target_feature) / weight
 
         return loss

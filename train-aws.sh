@@ -1,3 +1,3 @@
 #! /bin/bash
 git pull
-./train.py
+./train-local.py

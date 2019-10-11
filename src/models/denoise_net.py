@@ -1,10 +1,16 @@
 import torch
 import torch.nn as nn
+from torch.utils.checkpoint import checkpoint_sequential
 
-NUM_INNER_CONVS = 10
-CHANNELS = 32
-# NUM_INNER_CONVS = 4
-# CHANNELS = 64
+# epoch / segments / samples / batch / GPU memory
+# 30s / 4 /500 / 32 / ~7GB
+# 16s / 5 /500 / 32 / ~4GB
+# 16s / 5 /500 / 48 / ~6GB
+# 16s / 6 /500 / 32 / ~6GB
+
+GRAD_CHECKPOINT_SEGMENTS = 5
+NUM_INNER_CONVS = 12
+CHANNELS = 64
 
 
 class SpeechDenoiseNet(nn.Module):
@@ -32,12 +38,15 @@ class SpeechDenoiseNet(nn.Module):
     def forward(self, input_t):
         """
         Input has shape (batch_size, 1, audio_length,) 
-        Output has shape (batch_size, 1, audio_length,) 
+        Output has shape (batch_size, audio_length,) 
         """
         batch_size = input_t.shape[0]
         assert input_t.shape[1] == 1
         audio_length = input_t.shape[2]
-        return self.convs(input_t).squeeze(dim=1)
+        # Use gradient checkpointing to save GPU memory.
+        modules = [m for m in self.convs._modules.values()]
+        conv_t = checkpoint_sequential(modules, GRAD_CHECKPOINT_SEGMENTS, input_t)
+        return conv_t.squeeze(dim=1)
 
 
 class ConvLayer(nn.Module):
