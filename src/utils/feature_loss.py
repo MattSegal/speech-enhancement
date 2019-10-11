@@ -23,7 +23,7 @@ class AudioFeatureLoss:
     def calculate_loss_weights(self):
         for idx in range(LOSS_LAYERS):
             layer_loss_avg = sum(
-                [losses[idx] for losses in self.self.layer_loss_history]
+                [losses[idx] for losses in self.layer_loss_history]
             ) / float(CALCULATE_CALL_COUNT)
             self.layer_weights[idx] = layer_loss_avg
 
