@@ -8,7 +8,7 @@ from torch.utils.checkpoint import checkpoint_sequential
 # 16s / 5 /500 / 48 / ~6GB
 # 16s / 6 /500 / 32 / ~6GB
 
-GRAD_CHECKPOINT_SEGMENTS = 2
+GRAD_CHECKPOINT_SEGMENTS = 4
 NUM_INNER_CONVS = 8
 CHANNELS = 64
 
