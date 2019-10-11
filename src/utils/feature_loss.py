@@ -23,14 +23,14 @@ class AudioFeatureLoss:
     def calculate_loss_weights(self):
         for idx in range(LOSS_LAYERS):
             layer_loss_avg = sum(
-                [losses[idx] for losses in self.layer_loss_history]
+                [losses[idx] for losses in self.self.layer_loss_history]
             ) / float(CALCULATE_CALL_COUNT)
             self.layer_weights[idx] = layer_loss_avg
 
     def reset_loss_tracking(self):
         self.calls = 0
         self.layer_weights = [1.0 for _ in range(LOSS_LAYERS)]
-        self.layer_loss_history = [[] for _ in range(CALCULATE_CALL_COUNT)]
+        self.self.layer_loss_history = [[] for _ in range(CALCULATE_CALL_COUNT)]
 
     def __call__(self, predicted_audio, target_audio):
         """
@@ -68,7 +68,7 @@ class AudioFeatureLoss:
                 l1_loss(predicted_feature, target_feature) / self.layer_weights[idx]
             )
             if self.calls < CALCULATE_CALL_COUNT:
-                layer_loss_history[self.calls].append(raw_loss)
+                self.layer_loss_history[self.calls].append(raw_loss)
 
         waveform_mean_error = (
             predicted_audio.mean().abs() - target_audio.mean().abs()
