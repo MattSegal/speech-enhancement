@@ -8,7 +8,7 @@ from scipy.io import wavfile
 
 DATA_PATH = "data/"
 
-MAX_SAMPLES = 32
+MAX_SAMPLES = 1024
 MAX_AUDIO_LENGTH = 32767  # ~2s of data
 
 

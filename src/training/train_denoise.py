@@ -1,9 +1,6 @@
 """
 Training loop for speech denoiser
 """
-import os
-import time
-
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -16,21 +13,22 @@ from ..models.denoise_net import SpeechDenoiseNet
 from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
 from ..utils.feature_loss import AudioFeatureLoss
+from ..utils.checkpoint import save_checkpoint
 
 USE_WANDB = False
 USE_CUDA = True
-NUM_EPOCHS = 10
+NUM_EPOCHS = 100
+CHECKPOINT_EPOCHS = 10
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 # WEIGHT_DECAY = 1e-2
 WEIGHT_DECAY = 0
 BATCH_SIZE = 32
-CHECKPOINT_DIR = "checkpoints"
-# LOSS_NET_CHECKPOINT = "checkpoints/scene-net-loss.ckpt"
 LOSS_NET_CHECKPOINT = (
     "checkpoints/scene-net-denoiser-loss-split-up-conv-layers-2-1570666708.ckpt"
 )
 
+WANDB_NAME = None
 if USE_WANDB:
     WANDB_NAME = input("What do you want to call this run: ")
     WANDB_PROJECT = "speech-denoise-net"
@@ -76,7 +74,6 @@ loss_net = SceneNet().cuda()
 loss_net.load_state_dict(torch.load(LOSS_NET_CHECKPOINT))
 loss_net.eval()
 criterion = AudioFeatureLoss(loss_net)
-# criterion = nn.MSELoss()
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
@@ -91,6 +88,8 @@ validation_mse = MovingAverage(decay=0.8)
 
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
+    if epoch % CHECKPOINT_EPOCHS == 0:
+        checkpoint_path = save_checkpoint(net, "denoise-net", name=WANDB_NAME)
 
     # Run training loop
     net.train()
@@ -125,6 +124,8 @@ for epoch in range(NUM_EPOCHS):
         loss_amount = loss.data.item()
         training_loss.update(loss_amount)
 
+    criterion.epoch()
+
     # Check performance (loss) on validation set.
     net.eval()
     with torch.no_grad():
@@ -141,32 +142,23 @@ for epoch in range(NUM_EPOCHS):
             mse = mean_squared_error(outputs, targets).data.item()
             validation_mse.update(mse)
 
-    # Log training information
-    print(f"\n\tTraining loss:       {training_loss.value:0.4f}")
-    print(f"\tValidation loss:     {validation_loss.value:0.4f}")
-    print(f"\tTraining MSE:        {training_mse.value:0.4f}")
-    print(f"\tValidation MSE:      {validation_mse.value:0.4f}")
-
+    # Log training information for epoch.
+    training_info = {
+        "Training Loss": training_loss.value,
+        "Validation Loss": validation_loss.value,
+        "Training MSE": training_mse.value,
+        "Validation MSE": validation_mse.value,
+    }
+    print("")
+    for k, v in training_info.items():
+        s = "{k: <20}{v:0.4f}".format(k=k, v=v)
+        print(s)
     if USE_WANDB:
-        wandb.log(
-            {
-                "Training Loss": training_loss.value,
-                "Validation Loss": validation_loss.value,
-                "Training MSE": training_mse.value,
-                "Validation MSE": validation_mse.value,
-            }
-        )
+        wandb.log(training_info)
 
-# Save model to disk
-if USE_WANDB:
-    checkpoint_filename = f"denoise-net-{WANDB_NAME}-{int(time.time())}.ckpt"
-else:
-    checkpoint_filename = f"denoise-net-{int(time.time())}.ckpt"
 
-print(f"\nSaving checkpoint as {checkpoint_filename}\n")
-checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
-torch.save(net.state_dict(), checkpoint_path)
-
+# Save final model checkpoint
+checkpoint_path = save_checkpoint(net, "denoise-net", name=WANDB_NAME)
 # Upload model to wandb
 if USE_WANDB:
     wandb.save(checkpoint_path)

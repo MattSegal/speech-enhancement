@@ -2,7 +2,7 @@ import torch
 
 # Only use first few layers for loss function.
 LOSS_LAYERS = 6
-CALCULATE_CALL_COUNT = 10
+CALCULATE_CALL_COUNT = 2
 
 
 class AudioFeatureLoss:
@@ -21,16 +21,24 @@ class AudioFeatureLoss:
         self.reset_loss_tracking()
 
     def calculate_loss_weights(self):
+        print("\nCalculating feature loss layer weights... ", end="")
         for idx in range(LOSS_LAYERS):
             layer_loss_avg = sum(
                 [losses[idx] for losses in self.layer_loss_history]
             ) / float(CALCULATE_CALL_COUNT)
             self.layer_weights[idx] = layer_loss_avg
 
+        print("done.")
+
     def reset_loss_tracking(self):
-        self.calls = 0
+        self.epochs = 0
         self.layer_weights = [1.0 for _ in range(LOSS_LAYERS)]
         self.layer_loss_history = [[] for _ in range(CALCULATE_CALL_COUNT)]
+
+    def epoch(self):
+        self.epochs += 1
+        if self.epochs == CALCULATE_CALL_COUNT:
+            self.calculate_loss_weights()
 
     def __call__(self, predicted_audio, target_audio):
         """
@@ -67,17 +75,16 @@ class AudioFeatureLoss:
             loss[0] += (
                 l1_loss(predicted_feature, target_feature) / self.layer_weights[idx]
             )
-            if self.calls < CALCULATE_CALL_COUNT:
-                self.layer_loss_history[self.calls].append(raw_loss)
+            if self.epochs < CALCULATE_CALL_COUNT:
+                self.layer_loss_history[self.epochs].append(raw_loss.detach().item())
 
-        waveform_mean_error = (
-            predicted_audio.mean().abs() - target_audio.mean().abs()
-        )
-        self.calls += 1
-        if self.calls == CALCULATE_CALL_COUNT:
-            self.calculate_loss_weights()
+        # Penalize model for having a weird mean value
+        waveform_mean_error_loss = mean_error_loss(predicted_audio, target_audio)
+        return loss + waveform_mean_error_loss
 
-        return loss + waveform_mean_error.item()
+
+def mean_error_loss(predicted_t, target_t):
+    return (predicted_t.mean().abs() - target_t.mean().abs()).abs()
 
 
 def l1_loss(predicted_t, target_t):
