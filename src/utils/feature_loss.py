@@ -30,7 +30,7 @@ class AudioFeatureLoss:
     def reset_loss_tracking(self):
         self.calls = 0
         self.layer_weights = [1.0 for _ in range(LOSS_LAYERS)]
-        self.self.layer_loss_history = [[] for _ in range(CALCULATE_CALL_COUNT)]
+        self.layer_loss_history = [[] for _ in range(CALCULATE_CALL_COUNT)]
 
     def __call__(self, predicted_audio, target_audio):
         """
