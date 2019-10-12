@@ -6,6 +6,7 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 from scipy.io import wavfile
 
+
 DATA_PATH = "data/"
 
 MAX_SAMPLES = 1024

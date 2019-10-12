@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
 
+# epoch / batch / GPU memory
+# 15s    / 32     / 2GB
+# 15s    / 64     / 4.5GB
+# 13s    / 128    / 4.7GB
+# X      / 256    / OOM
 
 MIN_SAMPLES = 32767
 CONV_LAYERS = [
@@ -9,7 +14,7 @@ CONV_LAYERS = [
     [32, 32, 2],
     [32, 32, 2],
     [32, 32, 2],
-    [32, 32, 2],  # Activations used for feature layer
+    [32, 32, 2],
     [32, 64, 2],
     [64, 64, 2],
     [64, 64, 2],
@@ -21,7 +26,7 @@ CONV_LAYERS = [
     [128, 128, 2],
     [128, 128, 1],
 ]
-CONV_ACT_SAMPLE_IDXS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+CONV_ACT_SAMPLE_IDXS = [0, 1, 2, 3, 4, 5]
 
 
 class SceneNet(nn.Module):
@@ -84,7 +89,7 @@ class SceneNet(nn.Module):
         conv_acts = input_t
         for idx, conv_layer in enumerate(self.conv_layers):
             conv_acts = conv_layer(conv_acts)
-            if idx in CONV_ACT_SAMPLE_IDXS:
+            if idx in CONV_ACT_SAMPLE_IDXS and not self.training:
                 self.feature_layers.append(conv_acts)
 
         # torch.Size([256, 128, 2+])
@@ -167,10 +172,11 @@ class ConvLayer(nn.Module):
             padding=1,
             bias=False,  # No bias when using batch norm
         )
-        self.lrelu = nn.LeakyReLU(negative_slope=0.2)
-        self.batch_norm = nn.BatchNorm1d(num_features=out_channels)
+        negative_slope = 0.2
+        self.lrelu = nn.LeakyReLU(negative_slope=negative_slope)
+        self.adaptive_batch_norm = AdaptiveBatchNorm1d(num_features=out_channels)
         # Apply Kaiming initialization to convolutional weights
-        nn.init.kaiming_normal_(self.conv.weight)
+        nn.init.kaiming_normal_(self.conv.weight, a=negative_slope)
 
     def forward(self, input_t):
         """
@@ -178,5 +184,22 @@ class ConvLayer(nn.Module):
         """
         conv_t = self.conv(input_t)
         relu_t = self.lrelu(conv_t)
-        norm_t = self.batch_norm(relu_t)
+        norm_t = self.adaptive_batch_norm(relu_t)
         return norm_t
+
+
+class AdaptiveBatchNorm1d(nn.Module):
+    """
+    Apply adaptive batch normalization
+    as defined in Fast Image Processing with Fully-Convolutional Networks
+    """
+
+    def __init__(self, num_features):
+        super().__init__()
+        self.batch_norm = nn.BatchNorm1d(num_features)
+        self.alpha = nn.Parameter(torch.tensor([1.0]))
+        self.beta = nn.Parameter(torch.tensor([0.0]))
+
+    def forward(self, input_t):
+        norm_t = self.batch_norm(input_t)
+        return self.alpha * input_t + self.beta * norm_t

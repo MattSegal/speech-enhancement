@@ -17,16 +17,18 @@ from ..models.scene_net import SceneNet
 from ..utils.moving_average import MovingAverage
 from ..utils.accuracy_tracker import AccuracyTracker, HammingLossTracker
 from ..utils.data_load import CombinedDataLoader
+from ..utils.checkpoint import save_checkpoint
 
 USE_CUDA = True
 USE_WANDB = True
-NUM_EPOCHS = 100
+NUM_EPOCHS = 500
+CHECKPOINT_EPOCHS = 50
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
-BATCH_SIZE = 64
-CHECKPOINT_DIR = "checkpoints"
+BATCH_SIZE = 128
 
+WANDB_NAME = None
 if USE_WANDB:
     WANDB_NAME = input("What do you want to call this run: ")
     WANDB_PROJECT = "chime-scene-net"
@@ -80,8 +82,12 @@ chime_validation_loss = MovingAverage(decay=0.8)
 tut_training_loss = MovingAverage(decay=0.8)
 tut_validation_loss = MovingAverage(decay=0.8)
 
+# Approx 15s per epoch
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
+    if epoch % CHECKPOINT_EPOCHS == 0:
+        checkpoint_path = save_checkpoint(net, "scene-net", name=WANDB_NAME)
+
     data_loader = CombinedDataLoader(
         chime_training_data_loader, tut_training_data_loader
     )
@@ -145,28 +151,29 @@ for epoch in range(NUM_EPOCHS):
         chime_validation_data_loader, tut_validation_data_loader
     )
     net.eval()
-    for inputs, labels in tqdm(data_loader):
-        use_chime = data_loader.is_loader_a
-        if use_chime:
-            net.set_chime_dataset()
-            validation_accuracy = chime_validation_accuracy
-            validation_loss = chime_validation_loss
-            criterion = chime_criterion
-        else:
-            net.set_tut_dataset()
-            validation_accuracy = tut_validation_accuracy
-            validation_loss = tut_validation_loss
-            criterion = tut_criterion
+    with torch.no_grad():
+        for inputs, labels in tqdm(data_loader):
+            use_chime = data_loader.is_loader_a
+            if use_chime:
+                net.set_chime_dataset()
+                validation_accuracy = chime_validation_accuracy
+                validation_loss = chime_validation_loss
+                criterion = chime_criterion
+            else:
+                net.set_tut_dataset()
+                validation_accuracy = tut_validation_accuracy
+                validation_loss = tut_validation_loss
+                criterion = tut_criterion
 
-        batch_size = inputs.shape[0]
-        inputs = inputs.view(batch_size, 1, -1)
-        inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
-        labels = labels.cuda() if USE_CUDA else labels.cpu()
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss_amount = loss.data.item()
-        validation_loss.update(loss_amount)
-        validation_accuracy.update(outputs, labels)
+            batch_size = inputs.shape[0]
+            inputs = inputs.view(batch_size, 1, -1)
+            inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
+            labels = labels.cuda() if USE_CUDA else labels.cpu()
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss_amount = loss.data.item()
+            validation_loss.update(loss_amount)
+            validation_accuracy.update(outputs, labels)
 
     # Log training information
     print("\nCHiME training data")
@@ -195,16 +202,8 @@ for epoch in range(NUM_EPOCHS):
             }
         )
 
-# Save model to disk
-if USE_WANDB:
-    checkpoint_filename = f"scene-net-{WANDB_NAME}-{int(time.time())}.ckpt"
-else:
-    checkpoint_filename = f"scene-net-{int(time.time())}.ckpt"
-
-print(f"\nSaving checkpoint as {checkpoint_filename}\n")
-checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
-torch.save(net.state_dict(), checkpoint_path)
-
+# Save final model checkpoint
+checkpoint_path = save_checkpoint(net, "scene-net", name=WANDB_NAME)
 # Upload model to wandb
 if USE_WANDB:
     wandb.save(checkpoint_path)
