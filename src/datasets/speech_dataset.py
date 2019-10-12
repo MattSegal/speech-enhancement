@@ -9,7 +9,6 @@ from scipy.io import wavfile
 
 DATA_PATH = "data/"
 
-MAX_SAMPLES = 1024
 MAX_AUDIO_LENGTH = 32767  # ~2s of data
 
 
@@ -28,7 +27,7 @@ class SpeechDataset(Dataset):
         self.clean_data = []
         self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
         # HACK - LIMIT TO 1 BATCH
-        self.clean_files = os.listdir(self.clean_folder)[:MAX_SAMPLES]
+        self.clean_files = os.listdir(self.clean_folder)
         assert all([f.endswith(".wav") for f in self.clean_files])
         self.load_data(self.clean_files, self.clean_folder, self.clean_data)
 
@@ -68,8 +67,7 @@ class SpeechDataset(Dataset):
         """
         How many samples there are in the dataset.
         """
-        # return len(self.noisy_data)
-        return min([len(self.noisy_data), 3000])
+        return len(self.noisy_data)
 
     def __getitem__(self, idx):
         """

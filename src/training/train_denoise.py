@@ -15,17 +15,15 @@ from ..utils.moving_average import MovingAverage
 from ..utils.feature_loss import AudioFeatureLoss
 from ..utils.checkpoint import save_checkpoint
 
-USE_WANDB = False
+USE_WANDB = True
 USE_CUDA = True
-NUM_EPOCHS = 100
+NUM_EPOCHS = 50
 CHECKPOINT_EPOCHS = 10
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 1e-2
 BATCH_SIZE = 32
-LOSS_NET_CHECKPOINT = (
-    "checkpoints/scene-net-denoiser-loss-split-up-conv-layers-2-1570666708.ckpt"
-)
+LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 
 WANDB_NAME = None
 if USE_WANDB:
@@ -45,14 +43,6 @@ if USE_WANDB:
 
 # Load datasets
 training_set = SpeechDataset(train=True)
-clean = []
-noisy = []
-for _ in range(5):
-    clean = [*training_set.clean_data, *clean]
-    noisy = [*training_set.noisy_data, *noisy]
-
-training_set.clean_data = clean
-training_set.noisy_data = noisy
 validation_set = SpeechDataset(train=False)
 
 # Construct data loaders
@@ -85,6 +75,7 @@ mean_squared_error = nn.MSELoss()
 training_mse = MovingAverage(decay=0.8)
 validation_mse = MovingAverage(decay=0.8)
 
+# Approx 30s per epoch
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
     if epoch % CHECKPOINT_EPOCHS == 0:
