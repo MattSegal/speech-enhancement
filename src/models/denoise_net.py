@@ -8,7 +8,7 @@ from torch.utils.checkpoint import checkpoint_sequential
 # 16s / 5 /500 / 48 / ~6GB
 # 16s / 6 /500 / 32 / ~6GB
 
-GRAD_CHECKPOINT_SEGMENTS = 5
+GRAD_CHECKPOINT_SEGMENTS = 1
 NUM_INNER_CONVS = 12
 CHANNELS = 64
 
@@ -23,7 +23,8 @@ class SpeechDenoiseNet(nn.Module):
 
         input_conv = ConvLayer(in_channels=1, out_channels=CHANNELS, dilation=1)
         inner_convs = [
-            ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=2 ** i)
+            # ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=2 ** i)
+            ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=1)
             for i in range(1, NUM_INNER_CONVS + 1)
         ]
         final_inner_conv = ConvLayer(
@@ -74,9 +75,8 @@ class ConvLayer(nn.Module):
             bias=False,  # No bias when using batch norm
         )
         # Apply Kaiming initialization to convolutional weights
-        leaky_relu_negative_slope = 0.2
-        nn.init.kaiming_normal_(self.conv.weight, a=leaky_relu_negative_slope)
-        self.leaky_relu = nn.LeakyReLU(negative_slope=leaky_relu_negative_slope)
+        nn.init.xavier_uniform_(self.conv.weight)
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
         self.adaptive_batch_norm = AdaptiveBatchNorm1d(num_features=out_channels)
 
     def forward(self, input_t):
@@ -84,8 +84,9 @@ class ConvLayer(nn.Module):
         Compute output tensor from input tensor
         """
         conv_t = self.conv(input_t)
-        relu_t = self.leaky_relu(conv_t)
-        return self.adaptive_batch_norm(relu_t)
+        norm_t = self.adaptive_batch_norm(conv_t)
+        relu_t = self.leaky_relu(norm_t)
+        return relu_t
 
 
 class AdaptiveBatchNorm1d(nn.Module):

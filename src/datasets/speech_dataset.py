@@ -26,8 +26,7 @@ class SpeechDataset(Dataset):
         print("Loading clean data...")
         self.clean_data = []
         self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
-        # HACK - LIMIT TO 1 BATCH
-        self.clean_files = os.listdir(self.clean_folder)
+        self.clean_files = os.listdir(self.clean_folder)[:1]  # HACK
         assert all([f.endswith(".wav") for f in self.clean_files])
         self.load_data(self.clean_files, self.clean_folder, self.clean_data)
 
@@ -35,7 +34,6 @@ class SpeechDataset(Dataset):
         self.noisy_data = []
         self.noisy_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_noisy")
         self.noisy_files = os.listdir(self.noisy_folder)
-        # HACK - limit to 1 batch
         self.noisy_files = [f for f in self.noisy_files if f in self.clean_files]
         assert all([f.endswith(".wav") for f in self.noisy_files])
         assert len(self.noisy_files) == len(self.clean_files)

@@ -172,11 +172,11 @@ class ConvLayer(nn.Module):
             padding=1,
             bias=False,  # No bias when using batch norm
         )
-        negative_slope = 0.2	
-        self.lrelu = nn.LeakyReLU(negative_slope=negative_slope)	
-        self.adaptive_batch_norm = AdaptiveBatchNorm1d(num_features=out_channels)	
+        negative_slope = 0.2
+        self.lrelu = nn.LeakyReLU(negative_slope=negative_slope)
+        self.adaptive_batch_norm = AdaptiveBatchNorm1d(num_features=out_channels)
         # Apply Kaiming initialization to convolutional weights
-        nn.init.kaiming_normal_(self.conv.weight, a=negative_slope)	
+        nn.init.kaiming_normal_(self.conv.weight, a=negative_slope)
 
     def forward(self, input_t):
         """
@@ -184,21 +184,22 @@ class ConvLayer(nn.Module):
         """
         conv_t = self.conv(input_t)
         relu_t = self.lrelu(conv_t)
-        norm_t = self.adaptive_batch_norm(relu_t)	
+        norm_t = self.adaptive_batch_norm(relu_t)
         return norm_t
 
-class AdaptiveBatchNorm1d(nn.Module):	
+
+class AdaptiveBatchNorm1d(nn.Module):
     """	
     Apply adaptive batch normalization	
     as defined in Fast Image Processing with Fully-Convolutional Networks	
-    """	
+    """
 
-     def __init__(self, num_features):	
-        super().__init__()	
-        self.batch_norm = nn.BatchNorm1d(num_features)	
-        self.alpha = nn.Parameter(torch.tensor([1.0]))	
-        self.beta = nn.Parameter(torch.tensor([0.0]))	
+    def __init__(self, num_features):
+        super().__init__()
+        self.batch_norm = nn.BatchNorm1d(num_features)
+        self.alpha = nn.Parameter(torch.tensor([1.0]))
+        self.beta = nn.Parameter(torch.tensor([0.0]))
 
-     def forward(self, input_t):	
-        norm_t = self.batch_norm(input_t)	
+    def forward(self, input_t):
+        norm_t = self.batch_norm(input_t)
         return self.alpha * input_t + self.beta * norm_t

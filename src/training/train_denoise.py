@@ -15,13 +15,13 @@ from ..utils.moving_average import MovingAverage
 from ..utils.feature_loss import AudioFeatureLoss
 from ..utils.checkpoint import save_checkpoint
 
-USE_WANDB = True
+USE_WANDB = False
 USE_CUDA = True
-NUM_EPOCHS = 50
+NUM_EPOCHS = 200  # 320 used
 CHECKPOINT_EPOCHS = 10
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
-WEIGHT_DECAY = 1e-2
+WEIGHT_DECAY = 0
 BATCH_SIZE = 32
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 
@@ -78,8 +78,8 @@ validation_mse = MovingAverage(decay=0.8)
 # Approx 30s per epoch
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
-    if epoch % CHECKPOINT_EPOCHS == 0:
-        checkpoint_path = save_checkpoint(net, "denoise-net", name=WANDB_NAME)
+    # if epoch % CHECKPOINT_EPOCHS == 0:
+    # checkpoint_path = save_checkpoint(net, "denoise-net", name=WANDB_NAME)
 
     # Run training loop
     net.train()
@@ -114,7 +114,7 @@ for epoch in range(NUM_EPOCHS):
         loss_amount = loss.data.item()
         training_loss.update(loss_amount)
 
-    criterion.epoch()
+    # criterion.epoch()
 
     # Check performance (loss) on validation set.
     net.eval()
