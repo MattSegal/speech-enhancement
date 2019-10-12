@@ -11,7 +11,7 @@ def save_checkpoint(net, prefix, name=None):
     Save model checkpoint to disk
     """
     if name:
-        checkpoint_filename = f"{prefix}-{WANDB_NAME}-{int(time.time())}.ckpt"
+        checkpoint_filename = f"{prefix}-{name}-{int(time.time())}.ckpt"
     else:
         checkpoint_filename = f"{prefix}-{int(time.time())}.ckpt"
 

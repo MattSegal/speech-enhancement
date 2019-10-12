@@ -21,8 +21,7 @@ NUM_EPOCHS = 100
 CHECKPOINT_EPOCHS = 10
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
-# WEIGHT_DECAY = 1e-2
-WEIGHT_DECAY = 0
+WEIGHT_DECAY = 1e-2
 BATCH_SIZE = 32
 LOSS_NET_CHECKPOINT = (
     "checkpoints/scene-net-denoiser-loss-split-up-conv-layers-2-1570666708.ckpt"
