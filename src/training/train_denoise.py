@@ -100,7 +100,7 @@ for epoch in range(NUM_EPOCHS):
         # Run loss function on over the model's prediction
         targets = targets.cuda() if USE_CUDA else targets.cpu()
         assert targets.shape == (batch_size, audio_length)
-        loss = criterion(outputs, targets)
+        loss = criterion(inputs, outputs, targets)
 
         # Calculate model weight gradients from the loss
         loss.backward()
@@ -114,8 +114,6 @@ for epoch in range(NUM_EPOCHS):
         loss_amount = loss.data.item()
         training_loss.update(loss_amount)
 
-    # criterion.epoch()
-
     # Check performance (loss) on validation set.
     net.eval()
     with torch.no_grad():
@@ -126,7 +124,7 @@ for epoch in range(NUM_EPOCHS):
             inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
             targets = targets.cuda() if USE_CUDA else targets.cpu()
             outputs = net(inputs)
-            loss = criterion(outputs, targets)
+            loss = criterion(inputs, outputs, targets)
             loss_amount = loss.data.item()
             validation_loss.update(loss_amount)
             mse = mean_squared_error(outputs, targets).data.item()

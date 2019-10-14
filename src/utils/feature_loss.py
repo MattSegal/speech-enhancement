@@ -1,7 +1,5 @@
 import torch
-
-# Only use first few layers for loss function.
-CALCULATE_CALL_COUNT = 2
+from torch import nn
 
 
 class AudioFeatureLoss:
@@ -17,33 +15,9 @@ class AudioFeatureLoss:
         And expose property `feature_layers` - which returns a list of weight vectors.
         """
         self.loss_net = loss_net
-        self.reset_loss_tracking()
+        self.mse = nn.MSELoss()
 
-    # def calculate_loss_weights(self):
-    #     print("\nCalculating feature loss layer weights... ", end="")
-    #     for idx in range(LOSS_LAYERS):
-    #         layer_loss_avg = sum(
-    #             [losses[idx] for losses in self.layer_loss_history]
-    #         ) / float(CALCULATE_CALL_COUNT)
-    #         self.layer_weights[idx] = layer_loss_avg
-
-    #     print("done.")
-
-    def reset_loss_tracking(self):
-        # TODO: Normalize each layer's loss by its running mean after some warm up period.
-        # The weights are set to balance the contribution of each layer to the loss
-        # Take average loss for each layer, over 1st 10 layers, then divide loss by that
-        # For first 10 training epochs use a warm up value of 1
-        self.epochs = 0
-        # self.layer_weights = [1.0 for _ in range(LOSS_LAYERS)]
-        # self.layer_loss_history = [[] for _ in range(CALCULATE_CALL_COUNT)]
-
-    def epoch(self):
-        self.epochs += 1
-        # if self.epochs == CALCULATE_CALL_COUNT:
-        #     self.calculate_loss_weights()
-
-    def __call__(self, predicted_audio, target_audio):
+    def __call__(self, input_audio, predicted_audio, target_audio):
         """
         Return single element loss tensor, containg loss value.
             predicted_audio is a tensor (batch_size, audio_length)
@@ -66,9 +40,13 @@ class AudioFeatureLoss:
             target_feature = target_feature_layers[idx]
             loss += l1_loss(predicted_feature, target_feature)
 
-        # Penalize model for having a weird mean value
-        waveform_mean_error_loss = mean_error_loss(predicted_audio, target_audio)
-        return loss + waveform_mean_error_loss
+        # Penalize model for not conserving power
+        true_noise = input_audio - target_audio
+        pred_noise = input_audio - predicted_audio
+        noise_error = 10 * self.mse(true_noise, pred_noise)
+        signal_error = 10 * self.mse(target_audio, predicted_audio)
+
+        return loss + noise_error + signal_error
 
 
 def mean_error_loss(predicted_t, target_t):

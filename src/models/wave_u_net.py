@@ -18,6 +18,9 @@ We use a fixed validation set of 10 randomly selected tracks.
 Then, the best model is fine-tuned with the batch size doubled and 
 the learning rate lowered to 0.00001, again until 20 epochs have passed without
 improved validation loss.
+
+audio-based MSE loss and mono
+signals downsampled to 8192 Hz
 """
 
 
@@ -30,27 +33,38 @@ class WaveUNet(nn.Module):
 
     def __init__(self):
         super().__init__()
+        self.tanh = nn.Tanh()
 
     def forward(self, input_t):
         """
         Input has shape (batch_size, 1, audio_length,) 
-        Output has shape (batch_size, audio_length,) 
+        Output has shape (batch_size, 2, audio_length,) 
+
+        Fc = 24 extra filters
+        per layer and filter sizes fd = 15 and fu = 5
         """
         # (batch, 1, 16384)
 
         # start downsampling
-        # repeat X times
+        # repeat L=12 times
         # conv1d
         # decimate channels
-        # (batch, 4, 288) ?
+        # (batch, 288, 4)
 
         # end of downsampling segment
         # conv1d
+        # (batch, 312, 4)
 
-        # repeat Y times
+        # repeat L=12 times
         # upsample
         # concat with sister layer
         # conv1d
+        # (batch, 24, 16384)
 
         # concat input
+        # (batch, 25, 16384)
+
         # conv1d with K output channels
+        # (batch, 2, 16384) (or 1, 3, 5, etc.)
+        return self.tanh(x)
+
