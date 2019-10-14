@@ -17,8 +17,8 @@ from ..utils.checkpoint import save_checkpoint
 
 USE_WANDB = True
 USE_CUDA = True
-NUM_EPOCHS = 200  # 320 used
-CHECKPOINT_EPOCHS = 50
+NUM_EPOCHS = 50  # 320 used
+CHECKPOINT_EPOCHS = 10
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 0
@@ -46,9 +46,7 @@ training_set = SpeechDataset(train=True)
 validation_set = SpeechDataset(train=False)
 
 # Construct data loaders
-training_data_loader = DataLoader(
-    training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
-)
+training_data_loader = DataLoader(training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3)
 validation_data_loader = DataLoader(
     validation_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
 )
@@ -78,8 +76,8 @@ validation_mse = MovingAverage(decay=0.8)
 # Approx 30s per epoch
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
-    # if epoch % CHECKPOINT_EPOCHS == 0:
-    # checkpoint_path = save_checkpoint(net, "denoise-net", name=WANDB_NAME)
+    if epoch % CHECKPOINT_EPOCHS == 0:
+        checkpoint_path = save_checkpoint(net, "denoise-net", name=WANDB_NAME)
 
     # Run training loop
     net.train()
