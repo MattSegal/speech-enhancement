@@ -15,10 +15,10 @@ from ..utils.moving_average import MovingAverage
 from ..utils.feature_loss import AudioFeatureLoss
 from ..utils.checkpoint import save_checkpoint
 
-USE_WANDB = False
+USE_WANDB = True
 USE_CUDA = True
 NUM_EPOCHS = 200  # 320 used
-CHECKPOINT_EPOCHS = 10
+CHECKPOINT_EPOCHS = 50
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 0

@@ -8,7 +8,7 @@ from torch.utils.checkpoint import checkpoint_sequential
 # 16s / 5 /500 / 48 / ~6GB
 # 16s / 6 /500 / 32 / ~6GB
 
-GRAD_CHECKPOINT_SEGMENTS = 1
+GRAD_CHECKPOINT_SEGMENTS = 5
 NUM_INNER_CONVS = 12
 CHANNELS = 64
 
@@ -23,8 +23,12 @@ class SpeechDenoiseNet(nn.Module):
 
         input_conv = ConvLayer(in_channels=1, out_channels=CHANNELS, dilation=1)
         inner_convs = [
-            # ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=2 ** i)
-            ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=1)
+            ConvLayer(
+                in_channels=CHANNELS,
+                out_channels=CHANNELS,
+                dilation=2 ** (i // 3)
+                # dilation=1,
+            )
             for i in range(1, NUM_INNER_CONVS + 1)
         ]
         final_inner_conv = ConvLayer(
@@ -35,6 +39,7 @@ class SpeechDenoiseNet(nn.Module):
         )
         conv_layers = [input_conv, *inner_convs, final_inner_conv, output_conv]
         self.convs = nn.Sequential(*conv_layers)
+        self.tanh = nn.Tanh()
 
     def forward(self, input_t):
         """
@@ -47,7 +52,8 @@ class SpeechDenoiseNet(nn.Module):
         # Use gradient checkpointing to save GPU memory.
         modules = [m for m in self.convs._modules.values()]
         conv_t = checkpoint_sequential(modules, GRAD_CHECKPOINT_SEGMENTS, input_t)
-        return conv_t.squeeze(dim=1)
+        conv_t = conv_t.squeeze(dim=1)
+        return self.tanh(conv_t)
 
 
 class ConvLayer(nn.Module):
@@ -98,8 +104,8 @@ class AdaptiveBatchNorm1d(nn.Module):
     def __init__(self, num_features):
         super().__init__()
         self.batch_norm = nn.BatchNorm1d(num_features)
-        self.alpha = nn.Parameter(torch.tensor([1.0]))
-        self.beta = nn.Parameter(torch.tensor([0.0]))
+        self.alpha = nn.Parameter(torch.tensor([0.0]))
+        self.beta = nn.Parameter(torch.tensor([1.0]))
 
     def forward(self, input_t):
         norm_t = self.batch_norm(input_t)

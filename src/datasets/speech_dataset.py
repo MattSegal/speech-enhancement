@@ -26,7 +26,7 @@ class SpeechDataset(Dataset):
         print("Loading clean data...")
         self.clean_data = []
         self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
-        self.clean_files = os.listdir(self.clean_folder)[:1]  # HACK
+        self.clean_files = os.listdir(self.clean_folder)
         assert all([f.endswith(".wav") for f in self.clean_files])
         self.load_data(self.clean_files, self.clean_folder, self.clean_data)
 
