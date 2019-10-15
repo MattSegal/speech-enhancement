@@ -15,6 +15,7 @@ from ..utils.moving_average import MovingAverage
 from ..utils.feature_loss import AudioFeatureLoss
 from ..utils.checkpoint import save_checkpoint
 
+WANDB_NAME = "try-tanh-3"
 USE_WANDB = True
 USE_CUDA = True
 NUM_EPOCHS = 50  # 320 used
@@ -25,9 +26,8 @@ WEIGHT_DECAY = 0
 BATCH_SIZE = 32
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 
-WANDB_NAME = None
 if USE_WANDB:
-    WANDB_NAME = input("What do you want to call this run: ")
+    WANDB_NAME = WANDB_NAME or input("What do you want to call this run: ")
     WANDB_PROJECT = "speech-denoise-net"
     wandb.init(
         name=WANDB_NAME or None,
