@@ -17,7 +17,7 @@ class AudioFeatureLoss:
         self.loss_net = loss_net
         self.mse = nn.MSELoss()
 
-    def get_feature_loss(self, input_audio, predicted_audio):
+    def get_feature_loss(self, predicted_audio, target_audio):
         assert predicted_audio.shape == target_audio.shape
         assert len(predicted_audio.shape) == 2
         batch_size = predicted_audio.shape[0]
@@ -50,8 +50,8 @@ class AudioFeatureLoss:
         pred_noise = input_audio - predicted_audio
 
         # Get feature losses for clean audio and noise
-        clean_feature_loss = self.get_feature_loss(input_audio, predicted_audio)
-        noise_feature_loss = self.get_feature_loss(true_noise, pred_noise)
+        clean_feature_loss = self.get_feature_loss(predicted_audio, target_audio)
+        noise_feature_loss = self.get_feature_loss(pred_noise, true_noise)
         return clean_feature_loss + noise_feature_loss
 
 
