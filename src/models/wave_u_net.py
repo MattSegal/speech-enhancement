@@ -123,13 +123,10 @@ class WaveUNet(nn.Module):
         acts = self.us_conv_10(acts, ds_acts_3)
         acts = self.us_conv_11(acts, ds_acts_2)
         acts = self.us_conv_12(acts, ds_acts_1)
-
-        # concat input
         # (batch, 24, 16384)
+
         output_t = self.out_conv(acts, input_t)
-        # (batch, 25, 16384)
-        # (batch, 2, 16384) (or 1, 3, 5, etc.)
-        # conv1d with K output channels
+        # (batch, 1, 16384) (or 1, 3, 5, etc.)
         return output_t
 
 
@@ -218,26 +215,22 @@ class UpSampleConvLayer(nn.Module):
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
+        self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
 
     def forward(self, input_t, sister_t):
         """
         Compute output tensor from input tensor
         """
-        # Upsample performs upsampling in the time direction by a
-        # factor of two, for which we use linear interpolation
+        # Upsample in the time direction by a factor of two, using interpolation
+        upsampled_t = self.upsample(input_t)
 
-        # TODO  - upsample
-        # Concat(x) concatenates the current,
-        # high-level features with more local features x
+        # Concatenate upsampled input and sister tensor from downsampling.
+        # Perform the concatenation in the feature map dimension.
+        combined_t = torch.cat((upsampled_t, sister_t), dim=1)
 
-        # In extensions
-        # of the base architecture (see below), where Conv1D does
-        # not involve zero-padding, x is centre-cropped first so it has
-        # the same number of time steps as the current layer.
-
-        # TODO - concat sister block
-        conv_t = self.conv(input_t)
+        # Run combined feature maps through convolutional layer.
+        conv_t = self.conv(combined_t)
         relu_t = self.leaky_relu(norm_t)
         return relu_t
 
@@ -256,7 +249,7 @@ class OutputConvLayer(nn.Module):
         """
         super().__init__()
         self.conv = nn.Conv1d(
-            in_channels=in_channels,
+            in_channels=in_channels + 1,
             out_channels=out_channels,
             kernel_size=1,
             bias=True,
@@ -269,7 +262,11 @@ class OutputConvLayer(nn.Module):
         """
         Compute output tensor from input tensor
         """
-        # concat input_t and sister_t
-        conv_t = self.conv(input_t)
-        relu_t = self.tanh(conv_t)
-        return relu_t
+        # Concatenate upsampled feature maps and input tensor.
+        # Perform the concatenation in the feature map dimension.
+        combined_t = torch.cat((input_t, sister_t), dim=1)
+
+        # Run combined feature maps through convolutional layer.
+        conv_t = self.conv(combined_t)
+        output_t = self.tanh(conv_t)
+        return output_t
