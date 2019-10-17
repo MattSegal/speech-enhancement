@@ -24,9 +24,9 @@ class AudioFeatureLoss:
         target_input = target_audio.view(batch_size, 1, -1)
 
         # Make predictions, get feature layers.
-        _ = self.loss_net(predict_input)
+        _ = self.loss_net(predict_input.cuda())
         pred_feature_layers = self.loss_net.feature_layers
-        _ = self.loss_net(target_input)
+        _ = self.loss_net(target_input.cuda())
         target_feature_layers = self.loss_net.feature_layers
 
         # Sum up l1 losses over all feature layers.
