@@ -17,8 +17,8 @@ from ..utils.checkpoint import save_checkpoint
 
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 WANDB_NAME = "try-noise-feature-loss"
-USE_WANDB = True
-USE_CUDA = True
+USE_WANDB = False
+USE_CUDA = False
 NUM_EPOCHS = 30
 CHECKPOINT_EPOCHS = 10
 LEARNING_RATE = 1e-4

@@ -45,6 +45,9 @@ class AudioFeatureLoss:
             predicted_audio is a tensor (batch_size, audio_length)
             target_audio is a tensor (batch_size, audio_length)
         """
+        import pdb
+
+        pdb.set_trace()
         # Calculate noise.
         true_noise = input_audio - target_audio
         pred_noise = input_audio - predicted_audio
