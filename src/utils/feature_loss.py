@@ -19,7 +19,6 @@ class AudioFeatureLoss:
 
     def get_feature_loss(self, predicted_audio, target_audio):
         assert predicted_audio.shape == target_audio.shape
-        assert len(predicted_audio.shape) == 2
         batch_size = predicted_audio.shape[0]
         predict_input = predicted_audio.view(batch_size, 1, -1)
         target_input = target_audio.view(batch_size, 1, -1)
@@ -45,9 +44,6 @@ class AudioFeatureLoss:
             predicted_audio is a tensor (batch_size, audio_length)
             target_audio is a tensor (batch_size, audio_length)
         """
-        import pdb
-
-        pdb.set_trace()
         # Calculate noise.
         true_noise = input_audio - target_audio
         pred_noise = input_audio - predicted_audio
