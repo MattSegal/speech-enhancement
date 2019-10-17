@@ -15,16 +15,16 @@ from ..utils.moving_average import MovingAverage
 from ..utils.feature_loss import AudioFeatureLoss
 from ..utils.checkpoint import save_checkpoint
 
-WANDB_NAME = "try-tanh-3"
+LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
+WANDB_NAME = "try-noise-feature-loss"
 USE_WANDB = True
 USE_CUDA = True
-NUM_EPOCHS = 50  # 320 used
+NUM_EPOCHS = 30
 CHECKPOINT_EPOCHS = 10
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 0
 BATCH_SIZE = 32
-LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 
 if USE_WANDB:
     WANDB_NAME = WANDB_NAME or input("What do you want to call this run: ")

@@ -17,40 +17,42 @@ class AudioFeatureLoss:
         self.loss_net = loss_net
         self.mse = nn.MSELoss()
 
-    def __call__(self, input_audio, predicted_audio, target_audio):
-        """
-        Return single element loss tensor, containg loss value.
-            predicted_audio is a tensor (batch_size, audio_length)
-            target_audio is a tensor (batch_size, audio_length)
-        """
+    def get_feature_loss(self, input_audio, predicted_audio):
         assert predicted_audio.shape == target_audio.shape
         assert len(predicted_audio.shape) == 2
         batch_size = predicted_audio.shape[0]
         predict_input = predicted_audio.view(batch_size, 1, -1)
         target_input = target_audio.view(batch_size, 1, -1)
-        # Make predictions, get feature layers
+
+        # Make predictions, get feature layers.
         _ = self.loss_net(predict_input)
         pred_feature_layers = self.loss_net.feature_layers
         _ = self.loss_net(target_input)
         target_feature_layers = self.loss_net.feature_layers
 
+        # Sum up l1 losses over all feature layers.
         loss = torch.tensor([0.0], requires_grad=True).cuda()
         for idx in range(len(pred_feature_layers)):
             predicted_feature = pred_feature_layers[idx]
             target_feature = target_feature_layers[idx]
             loss += l1_loss(predicted_feature, target_feature)
 
-        # Penalize model for not conserving power
+        return loss
+
+    def __call__(self, input_audio, predicted_audio, target_audio):
+        """
+        Return single element loss tensor, containg loss value.
+            predicted_audio is a tensor (batch_size, audio_length)
+            target_audio is a tensor (batch_size, audio_length)
+        """
+        # Calculate noise.
         true_noise = input_audio - target_audio
         pred_noise = input_audio - predicted_audio
-        noise_error = 10 * self.mse(true_noise, pred_noise)
-        signal_error = 10 * self.mse(target_audio, predicted_audio)
 
-        return loss + noise_error + signal_error
-
-
-def mean_error_loss(predicted_t, target_t):
-    return (predicted_t.mean().abs() - target_t.mean().abs()).abs()
+        # Get feature losses for clean audio and noise
+        clean_feature_loss = self.get_feature_loss(input_audio, predicted_audio)
+        noise_feature_loss = self.get_feature_loss(true_noise, pred_noise)
+        return clean_feature_loss + noise_feature_loss
 
 
 def l1_loss(predicted_t, target_t):
