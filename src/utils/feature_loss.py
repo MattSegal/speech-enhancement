@@ -49,8 +49,10 @@ class AudioFeatureLoss:
         pred_noise = input_audio - predicted_audio
 
         # Get feature losses for clean audio and noise
-        clean_feature_loss = self.get_feature_loss(predicted_audio, target_audio)
-        noise_feature_loss = self.get_feature_loss(pred_noise, true_noise)
+        with torch.no_grad():
+            clean_feature_loss = self.get_feature_loss(predicted_audio, target_audio)
+            noise_feature_loss = self.get_feature_loss(pred_noise, true_noise)
+
         return clean_feature_loss + noise_feature_loss
 
 
