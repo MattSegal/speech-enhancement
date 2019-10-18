@@ -30,7 +30,7 @@ class AudioFeatureLoss:
         target_feature_layers = self.loss_net.feature_layers
 
         # Sum up l1 losses over all feature layers.
-        loss = torch.tensor([0.0], requires_grad=True)
+        loss = torch.tensor([0.0], requires_grad=True).cuda()
         for idx in range(len(pred_feature_layers)):
             predicted_feature = pred_feature_layers[idx]
             target_feature = target_feature_layers[idx]
