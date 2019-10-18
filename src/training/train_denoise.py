@@ -57,8 +57,9 @@ if USE_WANDB:
     wandb.watch(net)
 
 # Initialize loss function, optimizer
-loss_net = SceneNet().cuda()
-loss_net.load_state_dict(torch.load(LOSS_NET_CHECKPOINT))
+loss_net = SceneNet().cpu()
+state_dict = torch.load(LOSS_NET_CHECKPOINT, map_location=torch.device("cpu"))
+loss_net.load_state_dict(state_dict)
 loss_net.eval()
 criterion = AudioFeatureLoss(loss_net)
 optimizer = optim.AdamW(
@@ -96,7 +97,6 @@ for epoch in range(NUM_EPOCHS):
         assert outputs.shape == (batch_size, audio_length)
 
         # Run loss function on over the model's prediction
-        targets = targets.cuda() if USE_CUDA else targets.cpu()
         assert targets.shape == (batch_size, audio_length)
         loss = criterion(inputs, outputs, targets)
 
@@ -120,7 +120,6 @@ for epoch in range(NUM_EPOCHS):
             audio_length = inputs.shape[1]
             inputs = inputs.view(batch_size, 1, -1)
             inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
-            targets = targets.cuda() if USE_CUDA else targets.cpu()
             outputs = net(inputs)
             loss = criterion(inputs, outputs, targets)
             loss_amount = loss.data.item()

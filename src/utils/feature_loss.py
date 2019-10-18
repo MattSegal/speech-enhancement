@@ -15,7 +15,6 @@ class AudioFeatureLoss:
         And expose property `feature_layers` - which returns a list of weight vectors.
         """
         self.loss_net = loss_net
-        self.mse = nn.MSELoss()
 
     def get_feature_loss(self, predicted_audio, target_audio):
         assert predicted_audio.shape == target_audio.shape
@@ -24,35 +23,37 @@ class AudioFeatureLoss:
         target_input = target_audio.view(batch_size, 1, -1)
 
         # Make predictions, get feature layers.
-        _ = self.loss_net(predict_input.cuda())
+        _ = self.loss_net(predict_input)
         pred_feature_layers = self.loss_net.feature_layers
-        _ = self.loss_net(target_input.cuda())
+        _ = self.loss_net(target_input)
         target_feature_layers = self.loss_net.feature_layers
 
         # Sum up l1 losses over all feature layers.
-        loss = torch.tensor([0.0], requires_grad=True).cuda()
+        loss = torch.tensor([0.0], requires_grad=True)
         for idx in range(len(pred_feature_layers)):
             predicted_feature = pred_feature_layers[idx]
             target_feature = target_feature_layers[idx]
-            loss += l1_loss(predicted_feature, target_feature)
+            loss = loss + l1_loss(predicted_feature, target_feature)
 
         return loss
 
-    def __call__(self, input_audio, predicted_audio, target_audio):
+    def __call__(self, _input_audio, _predicted_audio, _target_audio):
         """
         Return single element loss tensor, containg loss value.
             predicted_audio is a tensor (batch_size, audio_length)
             target_audio is a tensor (batch_size, audio_length)
         """
+        input_audio = _input_audio.cpu()
+        predicted_audio = _predicted_audio.cpu()
+        target_audio = _target_audio.cpu()
+
         # Calculate noise.
         true_noise = input_audio - target_audio
         pred_noise = input_audio - predicted_audio
 
         # Get feature losses for clean audio and noise
-        with torch.no_grad():
-            clean_feature_loss = self.get_feature_loss(predicted_audio, target_audio)
-            noise_feature_loss = self.get_feature_loss(pred_noise, true_noise)
-
+        clean_feature_loss = self.get_feature_loss(predicted_audio, target_audio)
+        noise_feature_loss = self.get_feature_loss(pred_noise, true_noise)
         return clean_feature_loss + noise_feature_loss
 
 
