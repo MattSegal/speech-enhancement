@@ -38,7 +38,7 @@ class AudioFeatureLoss:
 
         return loss
 
-    def __call__(self, _input_audio, _predicted_audio, _target_audio):
+    def __call__(self, input_audio, predicted_audio, target_audio):
         """
         Return single element loss tensor, containg loss value.
             predicted_audio is a tensor (batch_size, audio_length)
