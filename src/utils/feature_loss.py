@@ -25,6 +25,7 @@ class AudioFeatureLoss:
         # Make predictions, get feature layers.
         _ = self.loss_net(predict_input)
         pred_feature_layers = self.loss_net.feature_layers
+
         _ = self.loss_net(target_input)
         target_feature_layers = self.loss_net.feature_layers
 
@@ -43,10 +44,6 @@ class AudioFeatureLoss:
             predicted_audio is a tensor (batch_size, audio_length)
             target_audio is a tensor (batch_size, audio_length)
         """
-        input_audio = _input_audio.cpu()
-        predicted_audio = _predicted_audio.cpu()
-        target_audio = _target_audio.cpu()
-
         # Calculate noise.
         true_noise = input_audio - target_audio
         pred_noise = input_audio - predicted_audio

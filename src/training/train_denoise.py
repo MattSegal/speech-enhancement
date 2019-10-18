@@ -18,13 +18,12 @@ from ..utils.checkpoint import save_checkpoint
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 WANDB_NAME = "try-noise-feature-loss"
 USE_WANDB = True
-USE_CUDA = True
 NUM_EPOCHS = 30
 CHECKPOINT_EPOCHS = 10
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 0
-BATCH_SIZE = 32
+BATCH_SIZE = 8
 
 if USE_WANDB:
     WANDB_NAME = WANDB_NAME or input("What do you want to call this run: ")
@@ -52,13 +51,13 @@ validation_data_loader = DataLoader(
 )
 
 # Initialize model
-net = SpeechDenoiseNet().cuda() if USE_CUDA else SpeechDenoiseNet().cpu()
+net = SpeechDenoiseNet().cuda()
 if USE_WANDB:
     wandb.watch(net)
 
 # Initialize loss function, optimizer
-loss_net = SceneNet().cpu()
-state_dict = torch.load(LOSS_NET_CHECKPOINT, map_location=torch.device("cpu"))
+loss_net = SceneNet().cuda()
+state_dict = torch.load(LOSS_NET_CHECKPOINT)
 loss_net.load_state_dict(state_dict)
 loss_net.eval()
 criterion = AudioFeatureLoss(loss_net)
@@ -92,11 +91,12 @@ for epoch in range(NUM_EPOCHS):
         optimizer.zero_grad()
 
         # Get a prediction from the model
-        inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
+        inputs = inputs.cuda()
         outputs = net(inputs)
         assert outputs.shape == (batch_size, audio_length)
 
         # Run loss function on over the model's prediction
+        targets = targets.cuda()
         assert targets.shape == (batch_size, audio_length)
         loss = criterion(inputs, outputs, targets)
 
@@ -119,8 +119,9 @@ for epoch in range(NUM_EPOCHS):
             batch_size = inputs.shape[0]
             audio_length = inputs.shape[1]
             inputs = inputs.view(batch_size, 1, -1)
-            inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
+            inputs = inputs.cuda()
             outputs = net(inputs)
+            targets = targets.cuda()
             loss = criterion(inputs, outputs, targets)
             loss_amount = loss.data.item()
             validation_loss.update(loss_amount)
