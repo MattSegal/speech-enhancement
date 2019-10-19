@@ -68,63 +68,83 @@ class WaveUNet(nn.Module):
 
         self.md_conv = MiddleConvLayer(12 * 24, 13 * 24)
 
-        self.us_conv_1 = UpSampleConvLayer(13 * 24, 12 * 24)
-        self.us_conv_2 = UpSampleConvLayer(12 * 24, 11 * 24)
-        self.us_conv_3 = UpSampleConvLayer(11 * 24, 10 * 24)
-        self.us_conv_4 = UpSampleConvLayer(10 * 24, 9 * 24)
-        self.us_conv_5 = UpSampleConvLayer(9 * 24, 8 * 24)
-        self.us_conv_6 = UpSampleConvLayer(8 * 24, 7 * 24)
-        self.us_conv_7 = UpSampleConvLayer(7 * 24, 6 * 24)
-        self.us_conv_8 = UpSampleConvLayer(6 * 24, 5 * 24)
-        self.us_conv_9 = UpSampleConvLayer(5 * 24, 4 * 24)
-        self.us_conv_10 = UpSampleConvLayer(4 * 24, 3 * 24)
-        self.us_conv_11 = UpSampleConvLayer(3 * 24, 2 * 24)
-        self.us_conv_12 = UpSampleConvLayer(2 * 24, 1 * 24)
+        self.us_conv_1 = UpSampleConvLayer((2 * 13 - 1) * 24, 12 * 24)
+        self.us_conv_2 = UpSampleConvLayer((2 * 12 - 1) * 24, 11 * 24)
+        self.us_conv_3 = UpSampleConvLayer((2 * 11 - 1) * 24, 10 * 24)
+        self.us_conv_4 = UpSampleConvLayer((2 * 10 - 1) * 24, 9 * 24)
+        self.us_conv_5 = UpSampleConvLayer((2 * 9 - 1) * 24, 8 * 24)
+        self.us_conv_6 = UpSampleConvLayer((2 * 8 - 1) * 24, 7 * 24)
+        self.us_conv_7 = UpSampleConvLayer((2 * 7 - 1) * 24, 6 * 24)
+        self.us_conv_8 = UpSampleConvLayer((2 * 6 - 1) * 24, 5 * 24)
+        self.us_conv_9 = UpSampleConvLayer((2 * 5 - 1) * 24, 4 * 24)
+        self.us_conv_10 = UpSampleConvLayer((2 * 4 - 1) * 24, 3 * 24)
+        self.us_conv_11 = UpSampleConvLayer((2 * 3 - 1) * 24, 2 * 24)
+        self.us_conv_12 = UpSampleConvLayer((2 * 2 - 1) * 24, 1 * 24)
 
         self.out_conv = OutputConvLayer(24, 1)
 
     def forward(self, input_t):
         """
-        Input has shape (batch_size, 1, audio_length,) 
-        Output has shape (batch_size, 2, audio_length,) 
+        Input has shape (b, 1, audio_length = 16384+,) 
+        Output has shape (b, 1, audio_length = ???,) 
 
         Fc = 24 extra filters
         per layer and filter sizes fd = 15 and fu = 5
         """
-        # (batch, 1, 16384)
         # Downsampling
+        # (b, 1, 16384)
         acts, ds_acts_1 = self.ds_conv_1(input_t)
+        # (b, 24, 8192), (b, 24, 16384)
         acts, ds_acts_2 = self.ds_conv_2(acts)
+        # (b, 48, 4096), (b, 48, 8192)
         acts, ds_acts_3 = self.ds_conv_3(acts)
+        # (b, 72, 2048), (b, 72, 4096)
         acts, ds_acts_4 = self.ds_conv_4(acts)
+        # (b, 96, 1024), (b, 96, 2048)
         acts, ds_acts_5 = self.ds_conv_5(acts)
+        # (b, 120, 512), (b, 120, 1024)
         acts, ds_acts_6 = self.ds_conv_6(acts)
+        # (b, 144, 256), (b, 144, 512)
         acts, ds_acts_7 = self.ds_conv_7(acts)
+        # (b, 168, 128), (b, 168, 256)
         acts, ds_acts_8 = self.ds_conv_8(acts)
+        # (b, 192, 64), (b, 192, 128)
         acts, ds_acts_9 = self.ds_conv_9(acts)
+        # (b, 216, 32), (b, 216, 64)
         acts, ds_acts_10 = self.ds_conv_10(acts)
+        # (b, 240, 16), (b, 240, 32)
         acts, ds_acts_11 = self.ds_conv_11(acts)
+        # (b, 264, 8), (b, 264, 16)
         acts, ds_acts_12 = self.ds_conv_12(acts)
-        # (batch, 288, 4)
-
+        # (b, 288, 4), (b, 288, 8)
         acts = self.md_conv(acts)
-        # (batch, 312, 4)
+        # (b, 312, 4)
 
         # Upsampling
-        acts = self.us_conv_1(md_acts, ds_acts_12)
+        acts = self.us_conv_1(acts, ds_acts_12)
+        # (b, 288, 8)
         acts = self.us_conv_2(acts, ds_acts_11)
+        # (b, 264, 16)
         acts = self.us_conv_3(acts, ds_acts_10)
+        # (b, 240, 32)
         acts = self.us_conv_4(acts, ds_acts_9)
+        # (b, 216, 64)
         acts = self.us_conv_5(acts, ds_acts_8)
+        # (b, 192, 128)
         acts = self.us_conv_6(acts, ds_acts_7)
+        # (b, 168, 256)
         acts = self.us_conv_7(acts, ds_acts_6)
+        # (b, 144, 512)
         acts = self.us_conv_8(acts, ds_acts_5)
+        # (b, 120, 1024)
         acts = self.us_conv_9(acts, ds_acts_4)
+        # (b, 96, 2048)
         acts = self.us_conv_10(acts, ds_acts_3)
+        # (b, 72, 4096)
         acts = self.us_conv_11(acts, ds_acts_2)
+        # (b, 48, 8192)
         acts = self.us_conv_12(acts, ds_acts_1)
-        # (batch, 24, 16384)
-
+        # (b, 24, 16384)
         output_t = self.out_conv(acts, input_t)
         # (batch, 1, 16384) (or 1, 3, 5, etc.)
         return output_t
@@ -146,7 +166,8 @@ class DownSampleConvLayer(nn.Module):
         self.conv = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
-            # padding=1,  # TODO - figure out how to zero pad properly.
+            # Same padding
+            padding=7,
             kernel_size=15,
             bias=True,
         )
@@ -159,7 +180,7 @@ class DownSampleConvLayer(nn.Module):
         Compute output tensor from input tensor
         """
         conv_t = self.conv(input_t)
-        relu_t = self.leaky_relu(norm_t)
+        relu_t = self.leaky_relu(conv_t)
         # Decimate discards features for every other time step to halve the time resolution
         decimated_t = relu_t[:, :, ::2]
         return decimated_t, relu_t
@@ -167,30 +188,31 @@ class DownSampleConvLayer(nn.Module):
 
 class MiddleConvLayer(nn.Module):
     def __init__(self, in_channels, out_channels):
-    """
-    Setup the layer.
-        in_channels: number of input channels to be convoluted
-        out_channels: number of output channels to be produced
+        """
+        Setup the layer.
+            in_channels: number of input channels to be convoluted
+            out_channels: number of output channels to be produced
 
-    """
-    super().__init__()
-    self.conv = nn.Conv1d(
-        in_channels=in_channels,
-        out_channels=out_channels,
-        # padding=1,  # TODO - figure out how to zero pad properly.
-        kernel_size=15,
-        bias=True,
-    )
-    # Apply Kaiming initialization to convolutional weights
-    nn.init.xavier_uniform_(self.conv.weight)
-    self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
+        """
+        super().__init__()
+        self.conv = nn.Conv1d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            # Same padding
+            padding=7,
+            kernel_size=15,
+            bias=True,
+        )
+        # Apply Kaiming initialization to convolutional weights
+        nn.init.xavier_uniform_(self.conv.weight)
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
 
     def forward(self, input_t):
         """
         Compute output tensor from input tensor
         """
         conv_t = self.conv(input_t)
-        relu_t = self.leaky_relu(norm_t)
+        relu_t = self.leaky_relu(conv_t)
         return relu_t
 
 
@@ -211,27 +233,35 @@ class UpSampleConvLayer(nn.Module):
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=5,
+            # Same padding
+            padding=2,
             bias=True,
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
-        self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.upsample = nn.Upsample(scale_factor=2, mode="linear", align_corners=True)
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
 
     def forward(self, input_t, sister_t):
         """
         Compute output tensor from input tensor
+            input  (b, C + 24, L)
+            sister (b, C, 2L)
         """
         # Upsample in the time direction by a factor of two, using interpolation
+        # (b, 312, 4)
         upsampled_t = self.upsample(input_t)
+        # (b, 312, 8)
 
         # Concatenate upsampled input and sister tensor from downsampling.
         # Perform the concatenation in the feature map dimension.
+        # (b, 312, 8) + (b, 288, 8)
         combined_t = torch.cat((upsampled_t, sister_t), dim=1)
 
         # Run combined feature maps through convolutional layer.
+        # (b, 600, 8)
         conv_t = self.conv(combined_t)
-        relu_t = self.leaky_relu(norm_t)
+        relu_t = self.leaky_relu(conv_t)
         return relu_t
 
 
@@ -249,10 +279,7 @@ class OutputConvLayer(nn.Module):
         """
         super().__init__()
         self.conv = nn.Conv1d(
-            in_channels=in_channels + 1,
-            out_channels=out_channels,
-            kernel_size=1,
-            bias=True,
+            in_channels=in_channels + 1, out_channels=out_channels, kernel_size=1, bias=True
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
