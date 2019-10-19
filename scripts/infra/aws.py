@@ -41,9 +41,10 @@ def print_status(instances):
     now = datetime.utcnow().replace(tzinfo=tzutc())
     print("\nEC2 instance statuses\n")
     table_data = [
-        [i["name"], i["State"]["Name"], timeago.format(i["LaunchTime"], now)] for i in instances
+        [i["name"], i["State"]["Name"], i["ip"], timeago.format(i["LaunchTime"], now)]
+        for i in instances
     ]
-    table_str = tabulate(table_data, headers=["Name", "Status", "Launched"])
+    table_str = tabulate(table_data, headers=["Name", "Status", "IP", "Launched"])
     print(table_str, "\n")
 
 
