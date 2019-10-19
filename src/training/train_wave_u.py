@@ -13,9 +13,9 @@ from ..utils.checkpoint import save_checkpoint
 WANDB_NAME = None
 USE_WANDB = True
 USE_CUDA = True
-NUM_EPOCHS = 12
-CHECKPOINT_EPOCHS = None
-CHECKPOINT_NAME = None  # "wave-u-net"
+NUM_EPOCHS = 30
+CHECKPOINT_EPOCHS = 10
+CHECKPOINT_NAME = "wave-u-net"
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 0
@@ -61,6 +61,7 @@ optimizer = optim.AdamW(
 training_loss = MovingAverage(decay=0.8)
 validation_loss = MovingAverage(decay=0.8)
 
+# ~2 min epoch
 # Run training for some number of epochs.
 for epoch in range(NUM_EPOCHS):
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
