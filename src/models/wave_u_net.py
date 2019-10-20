@@ -68,8 +68,10 @@ class WaveUNet(nn.Module):
     which was in turn inspired by this paper (https://arxiv.org/pdf/1806.03185.pdf)
 
     TODO
-        - add gradient checkpointing
-        - add batch norm
+        - add gradient checkpointing (meh, doesn't help much)
+        - add batch norm and or adaptive batch norm (might help training?)
+        - train on longer samples?
+        - more data? more realistic data? phone call data?
     """
 
     def __init__(self):

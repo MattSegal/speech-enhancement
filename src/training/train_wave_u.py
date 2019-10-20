@@ -8,8 +8,11 @@ import wandb
 from ..datasets.speech_dataset import SpeechDataset
 from ..models.wave_u_net import WaveUNet
 from ..utils.moving_average import MovingAverage
+from ..utils.feature_loss import AudioFeatureLoss
+from ..models.scene_net import SceneNet
 from ..utils.checkpoint import save_checkpoint
 
+LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 WANDB_NAME = None
 USE_WANDB = True
 USE_CUDA = True
@@ -19,7 +22,7 @@ CHECKPOINT_NAME = "wave-u-net"
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 0
-BATCH_SIZE = 32
+BATCH_SIZE = 8
 
 if USE_WANDB:
     WANDB_NAME = WANDB_NAME or input("What do you want to call this run: ")
@@ -54,7 +57,12 @@ if USE_WANDB:
     wandb.watch(net)
 
 # Initialize loss function, optimizer
-criterion = nn.MSELoss()
+loss_net = SceneNet().cuda()
+state_dict = torch.load(LOSS_NET_CHECKPOINT)
+loss_net.load_state_dict(state_dict)
+loss_net.eval()
+loss_net.set_feature_mode()
+criterion = AudioFeatureLoss(loss_net)
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
@@ -62,6 +70,9 @@ optimizer = optim.AdamW(
 # Keep track of loss history using moving average
 training_loss = MovingAverage(decay=0.8)
 validation_loss = MovingAverage(decay=0.8)
+mean_squared_error = nn.MSELoss()
+training_mse = MovingAverage(decay=0.8)
+validation_mse = MovingAverage(decay=0.8)
 
 # ~2 min epoch
 # Run training for some number of epochs.
@@ -92,11 +103,7 @@ for epoch in range(NUM_EPOCHS):
         # Run loss function on over the model's prediction
         targets = targets.cuda() if USE_CUDA else targets.cpu()
         assert targets.shape == (batch_size, audio_length)
-        true_noise = inputs - targets
-        pred_noise = inputs - outputs
-        speech_loss = criterion(outputs, targets)
-        noise_loss = criterion(pred_noise, true_noise)
-        loss = speech_loss + noise_loss
+        loss = criterion(inputs, outputs, targets)
 
         # Calculate model weight gradients from the loss
         loss.backward()
@@ -107,6 +114,8 @@ for epoch in range(NUM_EPOCHS):
         # Track training information
         loss_amount = loss.data.item()
         training_loss.update(loss_amount)
+        mse = mean_squared_error(outputs, targets).data.item()
+        training_mse.update(mse)
 
     # Check performance (loss) on validation set.
     net.eval()
@@ -119,22 +128,21 @@ for epoch in range(NUM_EPOCHS):
             targets = targets.cuda() if USE_CUDA else targets.cpu()
             outputs = net(inputs)
             outputs = outputs.squeeze(dim=1)
-            true_noise = inputs - targets
-            pred_noise = inputs - outputs
-            speech_loss = criterion(outputs, targets)
-            noise_loss = criterion(pred_noise, true_noise)
-            loss = speech_loss + noise_loss
+            loss = criterion(inputs, outputs, targets)
             loss_amount = loss.data.item()
             validation_loss.update(loss_amount)
-
+            mse = mean_squared_error(outputs, targets).data.item()
+            validation_mse.update(mse)
     # Log training information for this epoch.
     training_info = {
-        "Training Loss": training_loss.value,
-        "Validation Loss": validation_loss.value,
+        "Training Feature Loss": training_loss.value,
+        "Validation Feature Loss": validation_loss.value,
+        "Training Loss": training_mse.value,
+        "Validation Loss": validation_mse.value,
     }
     print("")
     for k, v in training_info.items():
-        s = "{k: <20}{v:0.4f}".format(k=k, v=v)
+        s = "{k: <30}{v:0.4f}".format(k=k, v=v)
         print(s)
     if USE_WANDB:
         wandb.log(training_info)

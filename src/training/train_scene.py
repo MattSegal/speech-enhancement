@@ -20,8 +20,8 @@ from ..utils.data_load import CombinedDataLoader
 from ..utils.checkpoint import save_checkpoint
 
 USE_CUDA = True
-USE_WANDB = True
-NUM_EPOCHS = 500
+USE_WANDB = False
+NUM_EPOCHS = 200
 CHECKPOINT_EPOCHS = 50
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
@@ -44,6 +44,11 @@ if USE_WANDB:
         },
     )
 
+# Initialize model
+net = SceneNet().cuda() if USE_CUDA else SceneNet().cpu()
+if USE_WANDB:
+    wandb.watch(net)
+
 # Load datasets
 chime_training_set = ChimeDataset(train=True)
 chime_validation_set = ChimeDataset(train=False)
@@ -64,10 +69,6 @@ tut_validation_data_loader = DataLoader(
     tut_validation_set, batch_size=BATCH_SIZE, shuffle=False, num_workers=3
 )
 
-# Initialize model
-net = SceneNet().cuda() if USE_CUDA else SceneNet().cpu()
-if USE_WANDB:
-    wandb.watch(net)
 
 # Setup loss functions, optimizer
 tut_criterion = nn.CrossEntropyLoss()

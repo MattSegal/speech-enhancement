@@ -1,11 +1,13 @@
 import torch
 import torch.nn as nn
+from torch.utils.checkpoint import checkpoint
 
-# epoch / batch / GPU memory
-# 15s    / 32     / 2GB
-# 15s    / 64     / 4.5GB
-# 13s    / 128    / 4.7GB
-# X      / 256    / OOM
+# epoch |   batch | GPU memory  |   checkpoints
+# 15s       32      2GB             0
+# 15s       64      4.5GB           0
+# 13s       128     4.7GB           0
+# X         256     OOM             0
+# X         128     4GB             conv layers
 
 MIN_SAMPLES = 32767
 CONV_LAYERS = [
@@ -88,9 +90,12 @@ class SceneNet(nn.Module):
         # torch.Size([256, 1, 32767+])
         conv_acts = input_t
         for idx, conv_layer in enumerate(self.conv_layers):
-            conv_acts = conv_layer(conv_acts)
+            conv_acts = checkpoint(conv_layer, conv_acts)
             if idx in CONV_ACT_SAMPLE_IDXS and not self.training:
                 self.feature_layers.append(conv_acts)
+
+        if not self.dataset:
+            return
 
         # torch.Size([256, 128, 2+])
         # Perform average pooling over features to produce a standard 1D feature vector.
@@ -98,8 +103,6 @@ class SceneNet(nn.Module):
         # self.feature_layers.append(pooled_acts.squeeze(dim=2))
         # (batch_size, num_channels)
         # torch.Size([256, 128, 1])
-
-        # Add 128 top level features to feature layers
 
         if self.dataset == self.TUT:
             # Pool channels with 1x1 convolution
@@ -138,6 +141,12 @@ class SceneNet(nn.Module):
 
     def set_chime_dataset(self):
         self.dataset = self.CHIME
+
+    def set_feature_mode(self):
+        self.dataset = None
+        for layer in self.conv_layers:
+            for param in layer.parameters():
+                param.requires_grad = False
 
     @property
     def num_labels(self):
