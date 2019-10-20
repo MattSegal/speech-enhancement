@@ -9,7 +9,7 @@ from scipy.io import wavfile
 
 DATA_PATH = "data/"
 
-MAX_AUDIO_LENGTH = 3 * 16384  # ~2s of data
+MAX_AUDIO_LENGTH = 2 * 16384  # ~1s of data
 
 
 class SpeechDataset(Dataset):

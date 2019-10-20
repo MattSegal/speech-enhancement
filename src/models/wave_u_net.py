@@ -1,6 +1,25 @@
 import torch
 import torch.nn as nn
-from torch.utils.checkpoint import checkpoint_sequential
+
+
+# Benchmarks taken with 1024 sample dataset
+# -----------------------------------------------------------------------
+# Batch |   Audio   |   Checkpoints |   Memory |    Epoch   |   Loss    |
+# -----------------------------------------------------------------------
+# 32        2**15       0               2.6GB       14s         speech mse
+# 32        2**15       0               5.0GB       14s         speech + noise mse
+# 64        2**15       0               5.2GB       14s         speech mse
+# 128       2**15       0               OOM         x           speech mse
+# 32        2**15       4               2.0GB       13s         speech mse
+# 64        2**15       4               3.9GB       13s         speech mse
+# 128       2**15       4               OOM         x           speech mse
+# 128       2**15       8               OOM         x           speech mse
+# 128       2**15       12              OOM         x           speech mse
+# 128       2**14       12              2GB         7s          speech mse
+# 256       2**14       12              OOM         x           speech mse
+# 256       2**14       16              OOM         x           speech mse
+# 176       2**14       16              ???         7s          speech mse
+
 
 """
 We use the same VCTK dataset
@@ -47,6 +66,10 @@ class WaveUNet(nn.Module):
     Convolutional neural net for speech enhancement
     Proposed in Improved Speech Enhancement with the Wave-U-Net (https://arxiv.org/pdf/1811.11307.pdf),
     which was in turn inspired by this paper (https://arxiv.org/pdf/1806.03185.pdf)
+
+    TODO
+        - add gradient checkpointing
+        - add batch norm
     """
 
     def __init__(self):
@@ -239,7 +262,9 @@ class UpSampleConvLayer(nn.Module):
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
-        self.upsample = nn.Upsample(scale_factor=2, mode="linear", align_corners=True)
+        self.upsample = nn.Upsample(
+            scale_factor=2, mode="linear", align_corners=True
+        )
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
 
     def forward(self, input_t, sister_t):
@@ -279,7 +304,10 @@ class OutputConvLayer(nn.Module):
         """
         super().__init__()
         self.conv = nn.Conv1d(
-            in_channels=in_channels + 1, out_channels=out_channels, kernel_size=1, bias=True
+            in_channels=in_channels + 1,
+            out_channels=out_channels,
+            kernel_size=1,
+            bias=True,
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)

@@ -19,7 +19,7 @@ CHECKPOINT_NAME = "wave-u-net"
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 0
-BATCH_SIZE = 128
+BATCH_SIZE = 32
 
 if USE_WANDB:
     WANDB_NAME = WANDB_NAME or input("What do you want to call this run: ")
@@ -41,7 +41,9 @@ training_set = SpeechDataset(train=True)
 validation_set = SpeechDataset(train=False)
 
 # Construct data loaders
-training_data_loader = DataLoader(training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3)
+training_data_loader = DataLoader(
+    training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
+)
 validation_data_loader = DataLoader(
     validation_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
 )
@@ -90,7 +92,11 @@ for epoch in range(NUM_EPOCHS):
         # Run loss function on over the model's prediction
         targets = targets.cuda() if USE_CUDA else targets.cpu()
         assert targets.shape == (batch_size, audio_length)
-        loss = criterion(outputs, targets)
+        true_noise = inputs - targets
+        pred_noise = inputs - outputs
+        speech_loss = criterion(outputs, targets)
+        noise_loss = criterion(pred_noise, true_noise)
+        loss = speech_loss + noise_loss
 
         # Calculate model weight gradients from the loss
         loss.backward()
@@ -113,12 +119,19 @@ for epoch in range(NUM_EPOCHS):
             targets = targets.cuda() if USE_CUDA else targets.cpu()
             outputs = net(inputs)
             outputs = outputs.squeeze(dim=1)
-            loss = criterion(outputs, targets)
+            true_noise = inputs - targets
+            pred_noise = inputs - outputs
+            speech_loss = criterion(outputs, targets)
+            noise_loss = criterion(pred_noise, true_noise)
+            loss = speech_loss + noise_loss
             loss_amount = loss.data.item()
             validation_loss.update(loss_amount)
 
     # Log training information for this epoch.
-    training_info = {"Training Loss": training_loss.value, "Validation Loss": validation_loss.value}
+    training_info = {
+        "Training Loss": training_loss.value,
+        "Validation Loss": validation_loss.value,
+    }
     print("")
     for k, v in training_info.items():
         s = "{k: <20}{v:0.4f}".format(k=k, v=v)
