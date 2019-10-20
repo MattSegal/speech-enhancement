@@ -145,4 +145,5 @@ if CHECKPOINT_NAME:
     checkpoint_path = save_checkpoint(net, CHECKPOINT_NAME, name=WANDB_NAME)
     # Upload model to wandb
     if USE_WANDB:
+        print(f"Uploading {checkpoint_path} to W&B")
         wandb.save(checkpoint_path)

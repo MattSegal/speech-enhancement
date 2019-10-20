@@ -18,4 +18,4 @@ def save_checkpoint(net, prefix, name=None):
     print(f"\nSaving checkpoint as {checkpoint_filename}\n")
     checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
     torch.save(net.state_dict(), checkpoint_path)
-    return checkpoint_filename
+    return checkpoint_path
