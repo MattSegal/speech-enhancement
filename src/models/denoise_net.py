@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from torch.utils.checkpoint import checkpoint_sequential
 
+from .layers.adaptive_batch_norm import AdaptiveBatchNorm1d
+
 # epoch / segments / samples / batch / GPU memory
 # 30s / 4 /500 / 32 / ~7GB
 # 16s / 5 /500 / 32 / ~4GB
@@ -31,12 +33,8 @@ class SpeechDenoiseNet(nn.Module):
             )
             for i in range(1, NUM_INNER_CONVS + 1)
         ]
-        final_inner_conv = ConvLayer(
-            in_channels=CHANNELS, out_channels=CHANNELS, dilation=1
-        )
-        output_conv = nn.Conv1d(
-            in_channels=CHANNELS, out_channels=1, kernel_size=1, bias=True
-        )
+        final_inner_conv = ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=1)
+        output_conv = nn.Conv1d(in_channels=CHANNELS, out_channels=1, kernel_size=1, bias=True)
         conv_layers = [input_conv, *inner_convs, final_inner_conv, output_conv]
         self.convs = nn.Sequential(*conv_layers)
         self.tanh = nn.Tanh()
@@ -93,20 +91,3 @@ class ConvLayer(nn.Module):
         norm_t = self.adaptive_batch_norm(conv_t)
         relu_t = self.leaky_relu(norm_t)
         return relu_t
-
-
-class AdaptiveBatchNorm1d(nn.Module):
-    """
-    Apply adaptive batch normalization
-    as defined in Fast Image Processing with Fully-Convolutional Networks
-    """
-
-    def __init__(self, num_features):
-        super().__init__()
-        self.batch_norm = nn.BatchNorm1d(num_features)
-        self.alpha = nn.Parameter(torch.tensor([0.0]))
-        self.beta = nn.Parameter(torch.tensor([1.0]))
-
-    def forward(self, input_t):
-        norm_t = self.batch_norm(input_t)
-        return self.alpha * input_t + self.beta * norm_t
