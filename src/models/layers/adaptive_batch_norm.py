@@ -1,4 +1,6 @@
+import torch
 from torch import nn
+
 
 class AdaptiveBatchNorm1d(nn.Module):
     """
