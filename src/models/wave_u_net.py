@@ -72,6 +72,10 @@ class WaveUNet(nn.Module):
     TODO
         - add gradient checkpointing (meh, doesn't help much)
         - add batch norm and or adaptive batch norm (might help training?)
+        - try improvements suggested in paper:
+            - ?
+            - ?
+            - ?
         - train on longer samples?
         - more data? more realistic data? phone call data?
     """
@@ -270,7 +274,9 @@ class UpSampleConvLayer(nn.Module):
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
-        self.upsample = nn.Upsample(scale_factor=2, mode="linear", align_corners=True)
+        self.upsample = nn.Upsample(
+            scale_factor=2, mode="linear", align_corners=True
+        )
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
         self.adaptive_batch_norm = AdaptiveBatchNorm1d(num_features=out_channels)
 
@@ -312,7 +318,10 @@ class OutputConvLayer(nn.Module):
         """
         super().__init__()
         self.conv = nn.Conv1d(
-            in_channels=in_channels + 1, out_channels=out_channels, kernel_size=1, bias=True
+            in_channels=in_channels + 1,
+            out_channels=out_channels,
+            kernel_size=1,
+            bias=True,
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
