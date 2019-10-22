@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 
-from .layers.adaptive_batch_norm import AdaptiveBatchNorm1d
-
 
 # Benchmarks taken with 1024 sample dataset
 # -----------------------------------------------------------------------
@@ -204,16 +202,14 @@ class DownSampleConvLayer(nn.Module):
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
-        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
-        self.adaptive_batch_norm = AdaptiveBatchNorm1d(num_features=out_channels)
+        self.leaky_relu = nn.PReLU()
 
     def forward(self, input_t):
         """
         Compute output tensor from input tensor
         """
         conv_t = self.conv(input_t)
-        norm_t = self.adaptive_batch_norm(conv_t)
-        relu_t = self.leaky_relu(norm_t)
+        relu_t = self.leaky_relu(conv_t)
         # Decimate discards features for every other time step to halve the time resolution
         decimated_t = relu_t[:, :, ::2]
         return decimated_t, relu_t
@@ -238,16 +234,14 @@ class MiddleConvLayer(nn.Module):
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
-        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
-        self.adaptive_batch_norm = AdaptiveBatchNorm1d(num_features=out_channels)
+        self.leaky_relu = nn.PReLU()
 
     def forward(self, input_t):
         """
         Compute output tensor from input tensor
         """
         conv_t = self.conv(input_t)
-        norm_t = self.adaptive_batch_norm(conv_t)
-        relu_t = self.leaky_relu(norm_t)
+        relu_t = self.leaky_relu(conv_t)
         return relu_t
 
 
@@ -274,11 +268,8 @@ class UpSampleConvLayer(nn.Module):
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
-        self.upsample = nn.Upsample(
-            scale_factor=2, mode="linear", align_corners=True
-        )
-        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
-        self.adaptive_batch_norm = AdaptiveBatchNorm1d(num_features=out_channels)
+        self.upsample = nn.Upsample(scale_factor=2, mode="linear", align_corners=True)
+        self.leaky_relu = nn.PReLU()
 
     def forward(self, input_t, sister_t):
         """
@@ -299,8 +290,7 @@ class UpSampleConvLayer(nn.Module):
         # Run combined feature maps through convolutional layer.
         # (b, 600, 8)
         conv_t = self.conv(combined_t)
-        norm_t = self.adaptive_batch_norm(conv_t)
-        relu_t = self.leaky_relu(norm_t)
+        relu_t = self.leaky_relu(conv_t)
         return relu_t
 
 
@@ -318,10 +308,7 @@ class OutputConvLayer(nn.Module):
         """
         super().__init__()
         self.conv = nn.Conv1d(
-            in_channels=in_channels + 1,
-            out_channels=out_channels,
-            kernel_size=1,
-            bias=True,
+            in_channels=in_channels + 1, out_channels=out_channels, kernel_size=1, bias=True
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
