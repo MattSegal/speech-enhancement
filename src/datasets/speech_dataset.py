@@ -9,7 +9,7 @@ from scipy.io import wavfile
 
 DATA_PATH = "data/"
 
-MAX_AUDIO_LENGTH = 2 ** 15  # ~1s of data at 16kHz
+MAX_AUDIO_LENGTH = 2 ** 16  # ~1s of data at 16kHz
 
 
 """

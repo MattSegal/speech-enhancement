@@ -17,14 +17,14 @@ LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 WANDB_NAME = None
 USE_WANDB = True
 USE_CUDA = True
-NUM_EPOCHS = 28
+NUM_EPOCHS = 8
 CHECKPOINT_EPOCHS = 4
 CHECKPOINT_NAME = "wave-u-net"
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
-WEIGHT_DECAY = 0
+WEIGHT_DECAY = 1e-4
 BATCH_SIZE = 8
-DISC_WEIGHT = 0.01
+DISC_WEIGHT = 1e-2
 
 if USE_WANDB:
     WANDB_NAME = WANDB_NAME or input("What do you want to call this run: ")
