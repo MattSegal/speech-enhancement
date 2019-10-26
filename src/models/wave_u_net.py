@@ -153,5 +153,5 @@ class ConvLayer(nn.Module):
         Compute output tensor from input tensor
         """
         acts = self.conv(input_t)
-        acts = self.norm(acts)
+        # acts = self.norm(acts)
         return self.nonlinearity(acts)
