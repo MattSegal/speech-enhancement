@@ -14,9 +14,9 @@ from ..utils.checkpoint import save_checkpoint
 
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 WANDB_NAME = None
-USE_WANDB = False
+USE_WANDB = True
 USE_CUDA = True
-NUM_EPOCHS = 10000
+NUM_EPOCHS = 12
 CHECKPOINT_EPOCHS = 10
 CHECKPOINT_NAME = "wave-u-net"
 LEARNING_RATE = 1e-4
