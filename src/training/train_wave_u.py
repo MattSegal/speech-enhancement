@@ -16,7 +16,7 @@ from ..utils.checkpoint import save_checkpoint
 DISC_NET_CHECKPOINT = None  # 'checkpoints/wave-u-net-gan-2-1572119346.ckpt'
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 WANDB_NAME = None
-USE_WANDB = False
+USE_WANDB = True
 USE_CUDA = True
 NUM_EPOCHS = 8
 CHECKPOINT_EPOCHS = 4
