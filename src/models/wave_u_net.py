@@ -100,10 +100,10 @@ class WaveUNet(nn.Module):
         # Encoding
         # (b, 1, 16384)
         acts = input_t
-        skip_acts = []
+        skip_connections = []
         for encoder in self.encoders:
             acts = encoder(acts)
-            skip_acts.append(acts)
+            skip_connections.append(acts)
             # Decimate activations
             acts = acts[:, :, ::2]
 
@@ -112,13 +112,13 @@ class WaveUNet(nn.Module):
         # (b, 312, 4)
 
         # Decoding
-        skip_acts = list(reversed(skip_acts))
+        skip_connections = list(reversed(skip_connections))
         for idx, decoder in enumerate(self.decoders):
             # Upsample in the time direction by a factor of two, using interpolation
             acts = self.upsample(acts)
-            # Concatenate upsampled input and skip tensor from encoding stage.
+            # Concatenate upsampled input and skip connection from encoding stage.
             # Perform the concatenation in the feature map dimension.
-            skip = skip_acts[idx]
+            skip = skip_connections[idx]
             acts = torch.cat((acts, skip), dim=1)
             acts = decoder(acts)
 
@@ -143,7 +143,7 @@ class ConvLayer(nn.Module):
             out_channels=out_channels,
             kernel_size=kernel,
             padding=kernel // 2,  # Same padding
-            bias=True,
+            bias=False,  # No bias because batch norm adds bias.
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
