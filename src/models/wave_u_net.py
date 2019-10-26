@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+from .layers.adaptive_batch_norm import AdaptiveBatchNorm1d
 
 # Benchmarks taken with 1024 sample dataset
 # -----------------------------------------------------------------------
@@ -53,276 +54,104 @@ Train and test datasets provided by the 28-speaker
 audio-based MSE loss and mono
 signals downsampled to 8192 Hz
 
-look into https://github.com/pytorch/audio
-for
-    data loading
-    audio transforms
-    resampling
+
 """
+
+NUM_C = 24  # Factor which determines the number of channels
+NUM_ENCODER_LAYERS = 12
 
 
 class WaveUNet(nn.Module):
     """
     Convolutional neural net for speech enhancement
     Proposed in Improved Speech Enhancement with the Wave-U-Net (https://arxiv.org/pdf/1811.11307.pdf),
-    which was in turn inspired by this paper (https://arxiv.org/pdf/1806.03185.pdf)
-
-    TODO
-        - add gradient checkpointing (meh, doesn't help much)
-        - add batch norm and or adaptive batch norm (might help training?)
-        - try improvements suggested in paper:
-            - ?
-            - ?
-            - ?
-        - train on longer samples?
-        - more data? more realistic data? phone call data?
+    which builds upon this paper (https://arxiv.org/pdf/1806.03185.pdf)
     """
 
     def __init__(self):
         super().__init__()
-        # Construct downsampling sequence
-        # out = in - filter + 1
-        self.ds_conv_1 = DownSampleConvLayer(1, 1 * 24)
-        self.ds_conv_2 = DownSampleConvLayer(1 * 24, 2 * 24)
-        self.ds_conv_3 = DownSampleConvLayer(2 * 24, 3 * 24)
-        self.ds_conv_4 = DownSampleConvLayer(3 * 24, 4 * 24)
-        self.ds_conv_5 = DownSampleConvLayer(4 * 24, 5 * 24)
-        self.ds_conv_6 = DownSampleConvLayer(5 * 24, 6 * 24)
-        self.ds_conv_7 = DownSampleConvLayer(6 * 24, 7 * 24)
-        self.ds_conv_8 = DownSampleConvLayer(7 * 24, 8 * 24)
-        self.ds_conv_9 = DownSampleConvLayer(8 * 24, 9 * 24)
-        self.ds_conv_10 = DownSampleConvLayer(9 * 24, 10 * 24)
-        self.ds_conv_11 = DownSampleConvLayer(10 * 24, 11 * 24)
-        self.ds_conv_12 = DownSampleConvLayer(11 * 24, 12 * 24)
+        # Construct encoders
+        self.encoders = nn.ModuleList()
+        layer = ConvLayer(1, NUM_C, kernel=15)
+        self.encoders.append(layer)
+        for i in range(1, NUM_ENCODER_LAYERS):
+            in_channels = i * NUM_C
+            out_channels = (i + 1) * NUM_C
+            layer = ConvLayer(in_channels, out_channels, kernel=15)
+            self.encoders.append(layer)
 
-        self.md_conv = MiddleConvLayer(12 * 24, 13 * 24)
+        self.middle = ConvLayer(12 * NUM_C, 13 * NUM_C, kernel=15)
 
-        self.us_conv_1 = UpSampleConvLayer((2 * 13 - 1) * 24, 12 * 24)
-        self.us_conv_2 = UpSampleConvLayer((2 * 12 - 1) * 24, 11 * 24)
-        self.us_conv_3 = UpSampleConvLayer((2 * 11 - 1) * 24, 10 * 24)
-        self.us_conv_4 = UpSampleConvLayer((2 * 10 - 1) * 24, 9 * 24)
-        self.us_conv_5 = UpSampleConvLayer((2 * 9 - 1) * 24, 8 * 24)
-        self.us_conv_6 = UpSampleConvLayer((2 * 8 - 1) * 24, 7 * 24)
-        self.us_conv_7 = UpSampleConvLayer((2 * 7 - 1) * 24, 6 * 24)
-        self.us_conv_8 = UpSampleConvLayer((2 * 6 - 1) * 24, 5 * 24)
-        self.us_conv_9 = UpSampleConvLayer((2 * 5 - 1) * 24, 4 * 24)
-        self.us_conv_10 = UpSampleConvLayer((2 * 4 - 1) * 24, 3 * 24)
-        self.us_conv_11 = UpSampleConvLayer((2 * 3 - 1) * 24, 2 * 24)
-        self.us_conv_12 = UpSampleConvLayer((2 * 2 - 1) * 24, 1 * 24)
+        # Construct decoders
+        self.upsample = nn.Upsample(
+            scale_factor=2, mode="linear", align_corners=True
+        )
+        self.decoders = nn.ModuleList()
+        for i in reversed(range(1, NUM_ENCODER_LAYERS + 1)):
+            in_channels = (2 * (i + 1) - 1) * NUM_C
+            out_channels = i * NUM_C
+            layer = ConvLayer(in_channels, out_channels, kernel=5)
+            self.decoders.append(layer)
 
-        self.out_conv = OutputConvLayer(24, 1)
+        # Extra dimension for input
+        self.output = ConvLayer(NUM_C + 1, 1, kernel=1, nonlinearity=nn.Tanh)
 
     def forward(self, input_t):
-        """
-        Input has shape (b, 1, audio_length = 16384+,) 
-        Output has shape (b, 1, audio_length = ???,) 
-
-        Fc = 24 extra filters
-        per layer and filter sizes fd = 15 and fu = 5
-        """
-        # Downsampling
+        # Encoding
         # (b, 1, 16384)
-        acts, ds_acts_1 = self.ds_conv_1(input_t)
-        # (b, 24, 8192), (b, 24, 16384)
-        acts, ds_acts_2 = self.ds_conv_2(acts)
-        # (b, 48, 4096), (b, 48, 8192)
-        acts, ds_acts_3 = self.ds_conv_3(acts)
-        # (b, 72, 2048), (b, 72, 4096)
-        acts, ds_acts_4 = self.ds_conv_4(acts)
-        # (b, 96, 1024), (b, 96, 2048)
-        acts, ds_acts_5 = self.ds_conv_5(acts)
-        # (b, 120, 512), (b, 120, 1024)
-        acts, ds_acts_6 = self.ds_conv_6(acts)
-        # (b, 144, 256), (b, 144, 512)
-        acts, ds_acts_7 = self.ds_conv_7(acts)
-        # (b, 168, 128), (b, 168, 256)
-        acts, ds_acts_8 = self.ds_conv_8(acts)
-        # (b, 192, 64), (b, 192, 128)
-        acts, ds_acts_9 = self.ds_conv_9(acts)
-        # (b, 216, 32), (b, 216, 64)
-        acts, ds_acts_10 = self.ds_conv_10(acts)
-        # (b, 240, 16), (b, 240, 32)
-        acts, ds_acts_11 = self.ds_conv_11(acts)
-        # (b, 264, 8), (b, 264, 16)
-        acts, ds_acts_12 = self.ds_conv_12(acts)
-        # (b, 288, 4), (b, 288, 8)
-        acts = self.md_conv(acts)
+        acts = input_t
+        skip_acts = []
+        for encoder in self.encoders:
+            acts = encoder(acts)
+            skip_acts.append(acts)
+            # Decimate activations
+            acts = acts[:, :, ::2]
+
+        # (b, 288, 4)
+        acts = self.middle(acts)
         # (b, 312, 4)
 
-        # Upsampling
-        acts = self.us_conv_1(acts, ds_acts_12)
-        # (b, 288, 8)
-        acts = self.us_conv_2(acts, ds_acts_11)
-        # (b, 264, 16)
-        acts = self.us_conv_3(acts, ds_acts_10)
-        # (b, 240, 32)
-        acts = self.us_conv_4(acts, ds_acts_9)
-        # (b, 216, 64)
-        acts = self.us_conv_5(acts, ds_acts_8)
-        # (b, 192, 128)
-        acts = self.us_conv_6(acts, ds_acts_7)
-        # (b, 168, 256)
-        acts = self.us_conv_7(acts, ds_acts_6)
-        # (b, 144, 512)
-        acts = self.us_conv_8(acts, ds_acts_5)
-        # (b, 120, 1024)
-        acts = self.us_conv_9(acts, ds_acts_4)
-        # (b, 96, 2048)
-        acts = self.us_conv_10(acts, ds_acts_3)
-        # (b, 72, 4096)
-        acts = self.us_conv_11(acts, ds_acts_2)
-        # (b, 48, 8192)
-        acts = self.us_conv_12(acts, ds_acts_1)
+        # Decoding
+        skip_acts = list(reversed(skip_acts))
+        for idx, decoder in enumerate(self.decoders):
+            # Upsample in the time direction by a factor of two, using interpolation
+            acts = self.upsample(acts)
+            # Concatenate upsampled input and skip tensor from encoding stage.
+            # Perform the concatenation in the feature map dimension.
+            skip = skip_acts[idx]
+            acts = torch.cat((acts, skip), dim=1)
+            acts = decoder(acts)
+
         # (b, 24, 16384)
-        output_t = self.out_conv(acts, input_t)
+        acts = torch.cat((acts, input_t), dim=1)
+        output_t = self.output(acts)
         # (batch, 1, 16384) (or 1, 3, 5, etc.)
         return output_t
 
 
-class DownSampleConvLayer(nn.Module):
+class ConvLayer(nn.Module):
     """
-    Single convolutional layer for downsampling
+    Single convolutional layer with nonlinear output
     """
 
-    def __init__(self, in_channels, out_channels):
-        """
-        Setup the layer.
-            in_channels: number of input channels to be convoluted
-            out_channels: number of output channels to be produced
-
-        """
+    def __init__(self, in_channels, out_channels, kernel, nonlinearity=nn.PReLU):
         super().__init__()
+        self.nonlinearity = nonlinearity()
+        self.norm = AdaptiveBatchNorm1d(out_channels)
         self.conv = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
-            # Same padding
-            padding=7,
-            kernel_size=15,
+            kernel_size=kernel,
+            padding=kernel // 2,  # Same padding
             bias=True,
         )
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
-        self.leaky_relu = nn.PReLU()
 
     def forward(self, input_t):
         """
         Compute output tensor from input tensor
         """
-        conv_t = self.conv(input_t)
-        relu_t = self.leaky_relu(conv_t)
-        # Decimate discards features for every other time step to halve the time resolution
-        decimated_t = relu_t[:, :, ::2]
-        return decimated_t, relu_t
-
-
-class MiddleConvLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        """
-        Setup the layer.
-            in_channels: number of input channels to be convoluted
-            out_channels: number of output channels to be produced
-
-        """
-        super().__init__()
-        self.conv = nn.Conv1d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            # Same padding
-            padding=7,
-            kernel_size=15,
-            bias=True,
-        )
-        # Apply Kaiming initialization to convolutional weights
-        nn.init.xavier_uniform_(self.conv.weight)
-        self.leaky_relu = nn.PReLU()
-
-    def forward(self, input_t):
-        """
-        Compute output tensor from input tensor
-        """
-        conv_t = self.conv(input_t)
-        relu_t = self.leaky_relu(conv_t)
-        return relu_t
-
-
-class UpSampleConvLayer(nn.Module):
-    """
-    Single convolutional layer for upsampling
-    """
-
-    def __init__(self, in_channels, out_channels):
-        """
-        Setup the layer.
-            in_channels: number of input channels to be convoluted
-            out_channels: number of output channels to be produced
-
-        """
-        super().__init__()
-        self.conv = nn.Conv1d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=5,
-            # Same padding
-            padding=2,
-            bias=True,
-        )
-        # Apply Kaiming initialization to convolutional weights
-        nn.init.xavier_uniform_(self.conv.weight)
-        self.upsample = nn.Upsample(scale_factor=2, mode="linear", align_corners=True)
-        self.leaky_relu = nn.PReLU()
-
-    def forward(self, input_t, sister_t):
-        """
-        Compute output tensor from input tensor
-            input  (b, C + 24, L)
-            sister (b, C, 2L)
-        """
-        # Upsample in the time direction by a factor of two, using interpolation
-        # (b, 312, 4)
-        upsampled_t = self.upsample(input_t)
-        # (b, 312, 8)
-
-        # Concatenate upsampled input and sister tensor from downsampling.
-        # Perform the concatenation in the feature map dimension.
-        # (b, 312, 8) + (b, 288, 8)
-        combined_t = torch.cat((upsampled_t, sister_t), dim=1)
-
-        # Run combined feature maps through convolutional layer.
-        # (b, 600, 8)
-        conv_t = self.conv(combined_t)
-        relu_t = self.leaky_relu(conv_t)
-        return relu_t
-
-
-class OutputConvLayer(nn.Module):
-    """
-    Single convolutional layer for output
-    """
-
-    def __init__(self, in_channels, out_channels):
-        """
-        Setup the layer.
-            in_channels: number of input channels to be convoluted
-            out_channels: number of output channels to be produced
-
-        """
-        super().__init__()
-        self.conv = nn.Conv1d(
-            in_channels=in_channels + 1, out_channels=out_channels, kernel_size=1, bias=True
-        )
-        # Apply Kaiming initialization to convolutional weights
-        nn.init.xavier_uniform_(self.conv.weight)
-        self.tanh = nn.Tanh()
-
-    def forward(self, input_t, sister_t):
-        """
-        Compute output tensor from input tensor
-        """
-        # Concatenate upsampled feature maps and input tensor.
-        # Perform the concatenation in the feature map dimension.
-        combined_t = torch.cat((input_t, sister_t), dim=1)
-
-        # Run combined feature maps through convolutional layer.
-        conv_t = self.conv(combined_t)
-        output_t = self.tanh(conv_t)
-        return output_t
+        acts = self.conv(input_t)
+        acts = self.norm(acts)
+        return self.nonlinearity(acts)

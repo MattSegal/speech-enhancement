@@ -1,0 +1,78 @@
+
+batch size          mem usage       epoch time
+8                   3GB             12m
+14                  6GB             12m
+
+waveunet with no loss
+batch size 8 
+1.0 GB (max) Start epoch
+0.3 GB Start epoch
+0.3 GB Pre input
+0.3 GB Pre predict
+0.5 GB Post predict
+0.5 GB Pre targets
+
+
+waveunet with MSE loss
+batch size 8 
+0.8 GB (max) Start epoch
+0.2 GB Start epoch
+0.2 GB Pre input
+0.2 GB Pre predict
+0.4 GB Post predict
+0.4 GB Pre targets
+0.4 GB Pre loss
+0.4 GB Pre backwards
+0.2 GB Pre gradient step
+0.2 GB Finish epoch
+0.8 GB (max) Finish epoch
+
+
+with feature mode, bail after 1st 6 layers
+batch size 8    2.5GB GPU
+1.7 GB (max) Start epoch
+-0.0 0.4 GB Start epoch
++0.0 0.4 GB Pre input
++0.0 0.4 GB Pre predict
++0.5 0.9 GB Post predict
++0.0 0.9 GB Pre targets
++0.0 0.9 GB Pre loss
+    +0.0 0.9 GB Pre noise calc
+    +0.0 0.9 GB Post noise calc
+    +0.0 0.9 GB Pre feature loss
+
+        +0.0 0.9 GB Pre predict loss
+            0.0 GB Predicted feature layers
+
+        -0.2 0.7 GB Pre target loss
+            0.0 GB Target feature layers
+
+        +0.0 0.7 GB Pre loss sum
+            +0.0 0.7 GB Inner loss loop
+            +0.0 0.8 GB Inner loss loop
+            +0.0 0.8 GB Inner loss loop
+            +0.0 0.8 GB Inner loss loop
+            +0.0 0.8 GB Inner loss loop
+            +0.0 0.8 GB Inner loss loop
+        +0.0 0.8 GB Post loss sum
+
+        -0.0 0.8 GB Pre predict loss
+            0.2 GB Predicted feature layers
+
+        +0.2 1.0 GB Pre target loss
+            0.2 GB Target feature layers
+
+        +0.2 1.2 GB Pre loss sum
+            +0.0 1.2 GB Inner loss loop
+            +0.1 1.4 GB Inner loss loop
+            +0.1 1.4 GB Inner loss loop
+            +0.0 1.5 GB Inner loss loop
+            +0.0 1.5 GB Inner loss loop
+            +0.0 1.5 GB Inner loss loop
+        +0.3 1.5 GB Post loss sum
+
+    -0.0 1.5 GB Post feature loss
+-0.0 1.5 GB Pre backwards (gradients are ditched here)
+-1.1 0.4 GB Pre gradient step
++0.0 0.4 GB Finish epoch
+1.9 GB (max) Finish epoch

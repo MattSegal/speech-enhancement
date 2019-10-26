@@ -10,6 +10,7 @@ from torch.utils.checkpoint import checkpoint
 # X         128     4GB             conv layers
 
 MIN_SAMPLES = 32767
+NUM_SAMPLE_LAYERS = 6
 CONV_LAYERS = [
     # in, out, stride
     [1, 32, 2],
@@ -28,7 +29,6 @@ CONV_LAYERS = [
     [128, 128, 2],
     [128, 128, 1],
 ]
-CONV_ACT_SAMPLE_IDXS = [0, 1, 2, 3, 4, 5]
 
 
 class SceneNet(nn.Module):
@@ -91,16 +91,16 @@ class SceneNet(nn.Module):
         conv_acts = input_t
         for idx, conv_layer in enumerate(self.conv_layers):
             conv_acts = checkpoint(conv_layer, conv_acts)
-            if idx in CONV_ACT_SAMPLE_IDXS and not self.training:
+            if idx < NUM_SAMPLE_LAYERS and not self.dataset:
+                # Store feature layers for feature loss.
                 self.feature_layers.append(conv_acts)
-
-        if not self.dataset:
-            return
+            elif not self.dataset:
+                # Bail early because we don't care about the output.
+                return
 
         # torch.Size([256, 128, 2+])
         # Perform average pooling over features to produce a standard 1D feature vector.
         pooled_acts = torch.mean(conv_acts, dim=2, keepdim=True)
-        # self.feature_layers.append(pooled_acts.squeeze(dim=2))
         # (batch_size, num_channels)
         # torch.Size([256, 128, 1])
 
@@ -144,6 +144,7 @@ class SceneNet(nn.Module):
 
     def set_feature_mode(self):
         self.dataset = None
+        # Maybe makes no difference?
         for layer in self.conv_layers:
             for param in layer.parameters():
                 param.requires_grad = False

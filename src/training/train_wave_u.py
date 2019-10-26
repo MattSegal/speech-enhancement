@@ -7,16 +7,16 @@ import wandb
 
 from ..datasets.speech_dataset import SpeechDataset
 from ..models.wave_u_net import WaveUNet
-from ..utils.moving_average import MovingAverage
-from ..utils.feature_loss import AudioFeatureLoss
 from ..models.scene_net import SceneNet
+from ..utils.trackers import MovingAverage
+from ..utils.loss import AudioFeatureLoss
 from ..utils.checkpoint import save_checkpoint
 
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 WANDB_NAME = None
-USE_WANDB = True
+USE_WANDB = False
 USE_CUDA = True
-NUM_EPOCHS = 12
+NUM_EPOCHS = 10000
 CHECKPOINT_EPOCHS = 10
 CHECKPOINT_NAME = "wave-u-net"
 LEARNING_RATE = 1e-4
@@ -45,10 +45,14 @@ validation_set = SpeechDataset(train=False)
 
 # Construct data loaders
 training_data_loader = DataLoader(
-    training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
+    training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3, pin_memory=True
 )
 validation_data_loader = DataLoader(
-    validation_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
+    validation_set,
+    batch_size=BATCH_SIZE,
+    shuffle=True,
+    num_workers=3,
+    pin_memory=True,
 )
 
 # Initialize model
@@ -63,6 +67,7 @@ loss_net.load_state_dict(state_dict)
 loss_net.eval()
 loss_net.set_feature_mode()
 criterion = AudioFeatureLoss(loss_net)
+
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
@@ -77,6 +82,8 @@ validation_mse = MovingAverage(decay=0.8)
 # ~2 min epoch
 # Run training for some number of epochs.
 for epoch in range(NUM_EPOCHS):
+    torch.cuda.empty_cache()
+
     print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
     # Save checkpoint periodically.
     is_checkpoint_epoch = CHECKPOINT_EPOCHS and epoch % CHECKPOINT_EPOCHS == 0
@@ -133,6 +140,7 @@ for epoch in range(NUM_EPOCHS):
             validation_loss.update(loss_amount)
             mse = mean_squared_error(outputs, targets).data.item()
             validation_mse.update(mse)
+
     # Log training information for this epoch.
     training_info = {
         "Training Feature Loss": training_loss.value,

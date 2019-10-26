@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 
+from .l1_loss import l1_loss
+
 
 class AudioFeatureLoss:
     """
@@ -23,18 +25,19 @@ class AudioFeatureLoss:
         target_input = target_audio.view(batch_size, 1, -1)
 
         # Make predictions, get feature layers.
-        _ = self.loss_net(predict_input)
+        self.loss_net(predict_input)
         pred_feature_layers = self.loss_net.feature_layers
 
-        _ = self.loss_net(target_input)
+        self.loss_net(target_input)
         target_feature_layers = self.loss_net.feature_layers
 
         # Sum up l1 losses over all feature layers.
         loss = torch.tensor([0.0], requires_grad=True).cuda()
         for idx in range(len(pred_feature_layers)):
+
             predicted_feature = pred_feature_layers[idx]
             target_feature = target_feature_layers[idx]
-            loss = loss + l1_loss(predicted_feature, target_feature)
+            loss.add_(l1_loss(predicted_feature, target_feature))
 
         return loss
 
@@ -53,15 +56,3 @@ class AudioFeatureLoss:
         noise_feature_loss = self.get_feature_loss(pred_noise, true_noise)
         return clean_feature_loss + noise_feature_loss
 
-
-def l1_loss(predicted_t, target_t):
-    """
-    Least absolute deviation / L1 loss function.
-    Loss is defined as the sum of all the absolute  difference between the predicted and target values.
-
-    Assume both input tensors have shape (batch_size, audio_length)
-    """
-    assert predicted_t.shape == target_t.shape
-    assert len(predicted_t.shape) > 1
-    diff_t = predicted_t - target_t
-    return diff_t.abs().mean()

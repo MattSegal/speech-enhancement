@@ -12,6 +12,15 @@ DATA_PATH = "data/"
 MAX_AUDIO_LENGTH = 2 ** 15  # ~1s of data at 16kHz
 
 
+"""
+look into https://github.com/pytorch/audio
+for
+    data loading
+    audio transforms
+    resampling
+"""
+
+
 class SpeechDataset(Dataset):
     """
     A dataset of clean and noisy speech, for use in the speech enhancement task.
@@ -26,7 +35,7 @@ class SpeechDataset(Dataset):
         print("Loading clean data...")
         self.clean_data = []
         self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
-        self.clean_files = os.listdir(self.clean_folder)
+        self.clean_files = os.listdir(self.clean_folder)[:32]
         assert all([f.endswith(".wav") for f in self.clean_files])
         self.load_data(self.clean_files, self.clean_folder, self.clean_data)
 

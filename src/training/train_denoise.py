@@ -11,8 +11,8 @@ import wandb
 from ..datasets.speech_dataset import SpeechDataset
 from ..models.denoise_net import SpeechDenoiseNet
 from ..models.scene_net import SceneNet
-from ..utils.moving_average import MovingAverage
-from ..utils.feature_loss import AudioFeatureLoss
+from ..utils.trackers import MovingAverage
+from ..utils.loss import AudioFeatureLoss
 from ..utils.checkpoint import save_checkpoint
 
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
@@ -45,7 +45,9 @@ training_set = SpeechDataset(train=True)
 validation_set = SpeechDataset(train=False)
 
 # Construct data loaders
-training_data_loader = DataLoader(training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3)
+training_data_loader = DataLoader(
+    training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
+)
 validation_data_loader = DataLoader(
     validation_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
 )

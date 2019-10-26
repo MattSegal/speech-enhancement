@@ -14,8 +14,7 @@ import wandb
 from ..datasets.scene_dataset import SceneDataset
 from ..datasets.chime_dataset import ChimeDataset
 from ..models.scene_net import SceneNet
-from ..utils.moving_average import MovingAverage
-from ..utils.accuracy_tracker import AccuracyTracker, HammingLossTracker
+from ..utils.trackers import AccuracyTracker, HammingLossTracker, MovingAverage
 from ..utils.data_load import CombinedDataLoader
 from ..utils.checkpoint import save_checkpoint
 
