@@ -1,7 +1,7 @@
 import torch
-import torch.nn as nn
+from torch import nn
+from torch.nn.utils import weight_norm
 
-from .layers.adaptive_batch_norm import AdaptiveBatchNorm1d
 
 # Benchmarks taken with 1024 sample dataset
 # -----------------------------------------------------------------------
@@ -137,14 +137,14 @@ class ConvLayer(nn.Module):
     def __init__(self, in_channels, out_channels, kernel, nonlinearity=nn.PReLU):
         super().__init__()
         self.nonlinearity = nonlinearity()
-        self.norm = AdaptiveBatchNorm1d(out_channels)
-        self.conv = nn.Conv1d(
+        conv = nn.Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel,
             padding=kernel // 2,  # Same padding
-            bias=False,  # No bias because batch norm adds bias.
+            bias=True,
         )
+        self.conv = weight_norm(conv)
         # Apply Kaiming initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
 
@@ -153,5 +153,4 @@ class ConvLayer(nn.Module):
         Compute output tensor from input tensor
         """
         acts = self.conv(input_t)
-        # acts = self.norm(acts)
         return self.nonlinearity(acts)
