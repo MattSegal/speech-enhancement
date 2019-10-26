@@ -33,8 +33,12 @@ class SpeechDenoiseNet(nn.Module):
             )
             for i in range(1, NUM_INNER_CONVS + 1)
         ]
-        final_inner_conv = ConvLayer(in_channels=CHANNELS, out_channels=CHANNELS, dilation=1)
-        output_conv = nn.Conv1d(in_channels=CHANNELS, out_channels=1, kernel_size=1, bias=True)
+        final_inner_conv = ConvLayer(
+            in_channels=CHANNELS, out_channels=CHANNELS, dilation=1
+        )
+        output_conv = nn.Conv1d(
+            in_channels=CHANNELS, out_channels=1, kernel_size=1, bias=True
+        )
         conv_layers = [input_conv, *inner_convs, final_inner_conv, output_conv]
         self.convs = nn.Sequential(*conv_layers)
         self.tanh = nn.Tanh()

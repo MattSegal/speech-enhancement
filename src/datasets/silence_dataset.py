@@ -42,4 +42,3 @@ class SilenceDataset(Dataset):
         Get item by integer index,
         """
         return torch.tensor(self.noisy_data[idx]), torch.tensor(self.clean_data[idx])
-

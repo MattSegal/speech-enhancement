@@ -55,4 +55,3 @@ class AudioFeatureLoss:
         clean_feature_loss = self.get_feature_loss(predicted_audio, target_audio)
         noise_feature_loss = self.get_feature_loss(pred_noise, true_noise)
         return clean_feature_loss + noise_feature_loss
-

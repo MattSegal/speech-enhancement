@@ -7,6 +7,7 @@ import wandb
 
 from ..datasets.speech_dataset import SpeechDataset
 from ..models.wave_u_net import WaveUNet
+from ..models.mel_discriminator import MelDiscriminatorNet
 from ..models.scene_net import SceneNet
 from ..utils.trackers import MovingAverage
 from ..utils.loss import AudioFeatureLoss
@@ -23,6 +24,7 @@ LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
 WEIGHT_DECAY = 0
 BATCH_SIZE = 8
+DISC_WEIGHT = 0.01
 
 if USE_WANDB:
     WANDB_NAME = WANDB_NAME or input("What do you want to call this run: ")
@@ -57,22 +59,33 @@ validation_data_loader = DataLoader(
 
 # Initialize model
 net = WaveUNet().cuda() if USE_CUDA else WaveUNet().cpu()
+# Initialize optmizer
+optimizer = optim.AdamW(
+    net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
+)
 if USE_WANDB:
     wandb.watch(net)
 
-# Initialize loss function, optimizer
+# Initialize feature loss function
 loss_net = SceneNet().cuda()
 state_dict = torch.load(LOSS_NET_CHECKPOINT)
 loss_net.load_state_dict(state_dict)
 loss_net.eval()
 loss_net.set_feature_mode()
-criterion = AudioFeatureLoss(loss_net)
+feature_loss_criterion = AudioFeatureLoss(loss_net)
 
-optimizer = optim.AdamW(
-    net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
+# Initialize discriminator loss function, optimizer
+disc_net = MelDiscriminatorNet().cuda() if USE_CUDA else MelDiscriminatorNet().cpu()
+disc_net.train()
+optimizer_disc = optim.AdamW(
+    disc_net.parameters(),
+    lr=LEARNING_RATE,
+    betas=ADAM_BETAS,
+    weight_decay=WEIGHT_DECAY,
 )
 
 # Keep track of loss history using moving average
+disc_loss = MovingAverage(decay=0.8)
 training_loss = MovingAverage(decay=0.8)
 validation_loss = MovingAverage(decay=0.8)
 mean_squared_error = nn.MSELoss()
@@ -108,9 +121,15 @@ for epoch in range(NUM_EPOCHS):
         assert outputs.shape == (batch_size, audio_length)
 
         # Run loss function on over the model's prediction
+        # TODO: Add discriminator to loss function
         targets = targets.cuda() if USE_CUDA else targets.cpu()
         assert targets.shape == (batch_size, audio_length)
-        loss = criterion(inputs, outputs, targets)
+        feature_loss = feature_loss_criterion(inputs, outputs, targets)
+
+        # Add discriminator to loss function
+        fake_audio = outputs.view(batch_size, 1, -1)
+        disc_fake = disc_net(fake_audio)
+        loss = feature_loss + DISC_WEIGHT * torch.mean((disc_fake - 1) ** 2)
 
         # Calculate model weight gradients from the loss
         loss.backward()
@@ -119,10 +138,27 @@ for epoch in range(NUM_EPOCHS):
         optimizer.step()
 
         # Track training information
-        loss_amount = loss.data.item()
+        loss_amount = feature_loss.data.item()
         training_loss.update(loss_amount)
         mse = mean_squared_error(outputs, targets).data.item()
         training_mse.update(mse)
+
+        # Train discriminator
+        fake_audio = outputs.view(batch_size, 1, -1).detach()
+        real_audio = inputs
+        optimizer_disc.zero_grad()
+        disc_fake = disc_net(fake_audio)
+        disc_real = disc_net(real_audio)
+        # 2 x (b, 1, 128)
+
+        # Apply least squares loss
+        loss = torch.mean((disc_real - 1) ** 2) + torch.mean(disc_fake ** 2)
+        loss.backward()
+        optimizer_disc.step()
+
+        # Track disc training information
+        loss_amount = loss.data.item()
+        disc_loss.update(loss_amount)
 
     # Check performance (loss) on validation set.
     net.eval()
@@ -135,7 +171,7 @@ for epoch in range(NUM_EPOCHS):
             targets = targets.cuda() if USE_CUDA else targets.cpu()
             outputs = net(inputs)
             outputs = outputs.squeeze(dim=1)
-            loss = criterion(inputs, outputs, targets)
+            loss = feature_loss_criterion(inputs, outputs, targets)
             loss_amount = loss.data.item()
             validation_loss.update(loss_amount)
             mse = mean_squared_error(outputs, targets).data.item()
@@ -147,6 +183,7 @@ for epoch in range(NUM_EPOCHS):
         "Validation Feature Loss": validation_loss.value,
         "Training Loss": training_mse.value,
         "Validation Loss": validation_mse.value,
+        "Discriminator Loss": disc_loss.value,
     }
     print("")
     for k, v in training_info.items():
