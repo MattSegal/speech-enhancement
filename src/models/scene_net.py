@@ -88,9 +88,9 @@ class SceneNet(nn.Module):
         # Pass input through a series of 1D covolutions
         # (batch_size, channels, length)
         # torch.Size([256, 1, 32767+])
-        conv_acts = input_t
+        acts = input_t
         for idx, conv_layer in enumerate(self.conv_layers):
-            conv_acts = checkpoint(conv_layer, conv_acts)
+            acts, conv_acts = checkpoint(conv_layer, acts)
             if idx < NUM_SAMPLE_LAYERS and not self.dataset:
                 # Store feature layers for feature loss.
                 self.feature_layers.append(conv_acts)
@@ -195,7 +195,7 @@ class ConvLayer(nn.Module):
         conv_t = self.conv(input_t)
         relu_t = self.lrelu(conv_t)
         norm_t = self.adaptive_batch_norm(relu_t)
-        return norm_t
+        return norm_t, conv_t
 
 
 class AdaptiveBatchNorm1d(nn.Module):
