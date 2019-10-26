@@ -10,22 +10,26 @@ from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
 from ..models.scene_net import SceneNet
 from ..utils.trackers import MovingAverage
-from ..utils.loss import AudioFeatureLoss
+from ..utils.loss import AudioFeatureLoss, RelativisticLoss
 from ..utils.checkpoint import save_checkpoint
 
-DISC_NET_CHECKPOINT = None  # 'checkpoints/wave-u-net-gan-2-1572119346.ckpt'
-LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
-WANDB_NAME = None
+# Runtime flags
 USE_WANDB = True
 USE_CUDA = True
-NUM_EPOCHS = 8
-CHECKPOINT_EPOCHS = 4
+# Checkpointing
+WANDB_NAME = None
 CHECKPOINT_NAME = "wave-u-net"
+CHECKPOINT_EPOCHS = 4
+DISC_NET_CHECKPOINT_NAME = "disc-net"
+DISC_NET_CHECKPOINT = None  # 'checkpoints/wave-u-net-gan-2-1572119346.ckpt'
+LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
+# Training hyperparams
+NUM_EPOCHS = 12
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
 BATCH_SIZE = 8
-DISC_WEIGHT = 1e-2
+DISC_WEIGHT = 1e-1
 
 if USE_WANDB:
     WANDB_NAME = WANDB_NAME or input("What do you want to call this run: ")
@@ -82,6 +86,7 @@ if DISC_NET_CHECKPOINT:
     disc_net.load_state_dict(state_dict)
 
 disc_net.train()
+gan_loss = RelativisticLoss(disc_net)
 optimizer_disc = optim.AdamW(
     disc_net.parameters(),
     lr=LEARNING_RATE,
@@ -97,16 +102,17 @@ mean_squared_error = nn.MSELoss()
 training_mse = MovingAverage(decay=0.8)
 validation_mse = MovingAverage(decay=0.8)
 
-# ~2 min epoch
 # Run training for some number of epochs.
 for epoch in range(NUM_EPOCHS):
+    print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
     torch.cuda.empty_cache()
 
-    print(f"\nEpoch {epoch + 1} / {NUM_EPOCHS}\n")
     # Save checkpoint periodically.
     is_checkpoint_epoch = CHECKPOINT_EPOCHS and epoch % CHECKPOINT_EPOCHS == 0
     if CHECKPOINT_NAME and is_checkpoint_epoch:
-        checkpoint_path = save_checkpoint(net, CHECKPOINT_NAME, name=WANDB_NAME)
+        save_checkpoint(net, CHECKPOINT_NAME, name=WANDB_NAME)
+    if DISC_NET_CHECKPOINT_NAME and is_checkpoint_epoch:
+        save_checkpoint(disc_net, DISC_NET_CHECKPOINT_NAME, name=WANDB_NAME)
 
     # Run training loop
     net.train()
@@ -126,20 +132,17 @@ for epoch in range(NUM_EPOCHS):
         assert outputs.shape == (batch_size, audio_length)
 
         # Run loss function on over the model's prediction
-        # TODO: Add discriminator to loss function
         targets = targets.cuda() if USE_CUDA else targets.cpu()
         assert targets.shape == (batch_size, audio_length)
         feature_loss = feature_loss_criterion(inputs, outputs, targets)
 
         # Add discriminator to loss function
         fake_audio = outputs.view(batch_size, 1, -1)
-        disc_fake = disc_net(fake_audio)
-        loss = feature_loss + DISC_WEIGHT * torch.mean((disc_fake - 1) ** 2)
+        gen_gan_loss = gan_loss.for_generator(inputs, fake_audio)
+        loss = feature_loss + DISC_WEIGHT * gen_gan_loss
 
-        # Calculate model weight gradients from the loss
+        # Calculate model weight gradients from the loss and update model.
         loss.backward()
-
-        # Update model weights via gradient descent.
         optimizer.step()
 
         # Track training information
@@ -149,20 +152,14 @@ for epoch in range(NUM_EPOCHS):
         training_mse.update(mse)
 
         # Train discriminator
-        fake_audio = outputs.view(batch_size, 1, -1).detach()
-        real_audio = inputs
         optimizer_disc.zero_grad()
-        disc_fake = disc_net(fake_audio)
-        disc_real = disc_net(real_audio)
-        # 2 x (b, 1, 128)
-
-        # Apply least squares loss
-        loss = torch.mean((disc_real - 1) ** 2) + torch.mean(disc_fake ** 2)
-        loss.backward()
+        fake_audio = outputs.view(batch_size, 1, -1).detach()
+        disc_gan_loss = gan_loss.for_discriminator(inputs, fake_audio)
+        disc_gan_loss.backward()
         optimizer_disc.step()
 
         # Track disc training information
-        loss_amount = loss.data.item()
+        loss_amount = disc_gan_loss.data.item()
         disc_loss.update(loss_amount)
 
     # Check performance (loss) on validation set.
@@ -201,6 +198,16 @@ for epoch in range(NUM_EPOCHS):
 # Save final model checkpoint
 if CHECKPOINT_NAME:
     checkpoint_path = save_checkpoint(net, CHECKPOINT_NAME, name=WANDB_NAME)
+    # Upload model to wandb
+    if USE_WANDB:
+        print(f"Uploading {checkpoint_path} to W&B")
+        wandb.save(checkpoint_path)
+
+# Save final discriminator checkpoint
+if DISC_NET_CHECKPOINT_NAME:
+    checkpoint_path = save_checkpoint(
+        disc_net, DISC_NET_CHECKPOINT_NAME, name=WANDB_NAME
+    )
     # Upload model to wandb
     if USE_WANDB:
         print(f"Uploading {checkpoint_path} to W&B")
