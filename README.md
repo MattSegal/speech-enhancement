@@ -6,6 +6,8 @@ Code and concepts borrowed from [Francois Germain's repo](https://github.com/fra
 
 **Status**: Currently trying to train the audio classifier network that is used for the loss function - training goes poorly.
 
+https://towardsdatascience.com/a-data-lakes-worth-of-audio-datasets-b45b88cd4ad
+
 ## RUNS
 
 - A1
