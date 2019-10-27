@@ -1,3 +1,5 @@
+import random
+
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -19,14 +21,15 @@ USE_CUDA = True
 # Dataset
 SUBSAMPLE = None
 # Checkpointing
-WANDB_NAME = None
-CHECKPOINT_NAME = "wave-u-net"
-CHECKPOINT_EPOCHS = 8
-DISC_NET_CHECKPOINT_NAME = "disc-net"
-DISC_NET_CHECKPOINT = None  # 'checkpoints/wave-u-net-gan-2-1572119346.ckpt'
+U_NET_CHECKPOINT = None
+DISC_NET_CHECKPOINT = None
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
+CHECKPOINT_EPOCHS = 8
+CHECKPOINT_NAME = "wave-u-net"
+DISC_NET_CHECKPOINT_NAME = "disc-net"
+WANDB_NAME = None
 # Training hyperparams
-NUM_EPOCHS = 18
+NUM_EPOCHS = 24
 BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
@@ -62,6 +65,10 @@ validation_data_loader = DataLoader(
 
 # Initialize model
 net = WaveUNet().cuda() if USE_CUDA else WaveUNet().cpu()
+if U_NET_CHECKPOINT:
+    state_dict = torch.load(U_NET_CHECKPOINT)
+    net.load_state_dict(state_dict)
+
 # Initialize optmizer
 optimizer = optim.AdamW(
     net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
@@ -84,7 +91,8 @@ if DISC_NET_CHECKPOINT:
     disc_net.load_state_dict(state_dict)
 
 disc_net.train()
-gan_loss = MultiScaleLoss(loss_fn=LeastSquaresLoss(disc_net))
+# gan_loss = MultiScaleLoss(loss_fn=LeastSquaresLoss(disc_net))
+gan_loss = LeastSquaresLoss(disc_net)
 optimizer_disc = optim.AdamW(
     disc_net.parameters(),
     lr=LEARNING_RATE,
@@ -115,22 +123,25 @@ for epoch in range(NUM_EPOCHS):
     # Run training loop
     net.train()
     for inputs, targets in tqdm(training_data_loader):
+        inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
+        targets = targets.cuda() if USE_CUDA else targets.cpu()
+        # 10% of the time, have no noise at all
+        is_clean_input = random.random() <= 0.1
+        if is_clean_input:
+            inputs = targets
+
         # Add channel dimension to input
         batch_size = inputs.shape[0]
         audio_length = inputs.shape[1]
         inputs = inputs.view(batch_size, 1, -1)
 
-        # Tell PyTorch to reset gradient tracking for new training run.
-        optimizer.zero_grad()
-
         # Get a prediction from the model
-        inputs = inputs.cuda() if USE_CUDA else inputs.cpu()
+        optimizer.zero_grad()
         outputs = net(inputs)
         outputs = outputs.squeeze(dim=1)
         assert outputs.shape == (batch_size, audio_length)
 
         # Run loss function on over the model's prediction
-        targets = targets.cuda() if USE_CUDA else targets.cpu()
         assert targets.shape == (batch_size, audio_length)
         feature_loss = feature_loss_criterion(inputs, outputs, targets)
 
