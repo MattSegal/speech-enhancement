@@ -9,8 +9,7 @@ from scipy.io import wavfile
 
 DATA_PATH = "data/"
 
-MAX_AUDIO_LENGTH = 2 ** 16  # ~1s of data at 16kHz
-
+MAX_AUDIO_LENGTH = 2 ** 15  # ~1s of data at 16kHz
 
 """
 look into https://github.com/pytorch/audio
@@ -28,7 +27,7 @@ class SpeechDataset(Dataset):
     The target is a 1D tensor of floats, representing a corresponding clean audio sample. 
     """
 
-    def __init__(self, train):
+    def __init__(self, train, subsample=None):
         dataset_label = "training" if train else "validation"
         print(f"Loading {dataset_label} dataset into memory.")
 
@@ -36,6 +35,9 @@ class SpeechDataset(Dataset):
         self.clean_data = []
         self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
         self.clean_files = os.listdir(self.clean_folder)
+        if subsample:
+            self.clean_files = self.clean_files[:subsample]
+
         assert all([f.endswith(".wav") for f in self.clean_files])
         self.load_data(self.clean_files, self.clean_folder, self.clean_data)
 

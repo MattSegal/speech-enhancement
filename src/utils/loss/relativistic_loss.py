@@ -31,7 +31,3 @@ class RelativisticLoss:
         a = torch.mean((disc_real - torch.mean(disc_fake) + 1) ** 2)
         b = torch.mean((disc_fake - torch.mean(disc_real) - 1) ** 2)
         return a + b
-
-    # Unused.
-    def _least_square_loss(self, disc_real, disc_fake):
-        return torch.mean((disc_real - 1) ** 2) + torch.mean(disc_fake ** 2)

@@ -10,25 +10,27 @@ from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
 from ..models.scene_net import SceneNet
 from ..utils.trackers import MovingAverage
-from ..utils.loss import AudioFeatureLoss, RelativisticLoss
+from ..utils.loss import AudioFeatureLoss, LeastSquaresLoss, MultiScaleLoss
 from ..utils.checkpoint import save_checkpoint
 
 # Runtime flags
 USE_WANDB = True
 USE_CUDA = True
+# Dataset
+SUBSAMPLE = None
 # Checkpointing
 WANDB_NAME = None
 CHECKPOINT_NAME = "wave-u-net"
-CHECKPOINT_EPOCHS = 4
+CHECKPOINT_EPOCHS = 8
 DISC_NET_CHECKPOINT_NAME = "disc-net"
 DISC_NET_CHECKPOINT = None  # 'checkpoints/wave-u-net-gan-2-1572119346.ckpt'
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 # Training hyperparams
-NUM_EPOCHS = 12
+NUM_EPOCHS = 18
+BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
-BATCH_SIZE = 8
 DISC_WEIGHT = 1e-1
 
 if USE_WANDB:
@@ -47,19 +49,15 @@ if USE_WANDB:
     )
 
 # Load datasets
-training_set = SpeechDataset(train=True)
-validation_set = SpeechDataset(train=False)
+training_set = SpeechDataset(train=True, subsample=SUBSAMPLE)
+validation_set = SpeechDataset(train=False, subsample=SUBSAMPLE)
 
 # Construct data loaders
 training_data_loader = DataLoader(
-    training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3, pin_memory=True
+    training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
 )
 validation_data_loader = DataLoader(
-    validation_set,
-    batch_size=BATCH_SIZE,
-    shuffle=True,
-    num_workers=3,
-    pin_memory=True,
+    validation_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
 )
 
 # Initialize model
@@ -86,7 +84,7 @@ if DISC_NET_CHECKPOINT:
     disc_net.load_state_dict(state_dict)
 
 disc_net.train()
-gan_loss = RelativisticLoss(disc_net)
+gan_loss = MultiScaleLoss(loss_fn=LeastSquaresLoss(disc_net))
 optimizer_disc = optim.AdamW(
     disc_net.parameters(),
     lr=LEARNING_RATE,
