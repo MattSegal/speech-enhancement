@@ -23,11 +23,11 @@ class RelativisticLoss:
         return self._relativistic_least_square_loss_for_disc(disc_real, disc_fake)
 
     def _relativistic_least_square_loss_for_gen(self, disc_real, disc_fake):
-        a = torch.mean((disc_real - torch.mean(disc_fake) - 1) ** 2)
-        b = torch.mean((disc_fake - torch.mean(disc_real) + 1) ** 2)
+        a = torch.mean((disc_real - torch.mean(disc_fake) + 1) ** 2)
+        b = torch.mean((disc_fake - torch.mean(disc_real) - 1) ** 2)
         return a + b
 
     def _relativistic_least_square_loss_for_disc(self, disc_real, disc_fake):
-        a = torch.mean((disc_real - torch.mean(disc_fake) + 1) ** 2)
-        b = torch.mean((disc_fake - torch.mean(disc_real) - 1) ** 2)
+        a = torch.mean((disc_real - torch.mean(disc_fake) - 1) ** 2)
+        b = torch.mean((disc_fake - torch.mean(disc_real) + 1) ** 2)
         return a + b

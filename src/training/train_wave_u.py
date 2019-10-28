@@ -12,7 +12,12 @@ from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
 from ..models.scene_net import SceneNet
 from ..utils.trackers import MovingAverage
-from ..utils.loss import AudioFeatureLoss, LeastSquaresLoss, MultiScaleLoss
+from ..utils.loss import (
+    AudioFeatureLoss,
+    RelativisticLoss,
+    LeastSquaresLoss,
+    MultiScaleLoss,
+)
 from ..utils.checkpoint import save_checkpoint
 
 # Runtime flags
@@ -24,12 +29,12 @@ SUBSAMPLE = None
 U_NET_CHECKPOINT = None
 DISC_NET_CHECKPOINT = None
 LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
-CHECKPOINT_EPOCHS = 8
+CHECKPOINT_EPOCHS = 4
 CHECKPOINT_NAME = "wave-u-net"
 DISC_NET_CHECKPOINT_NAME = "disc-net"
 WANDB_NAME = None
 # Training hyperparams
-NUM_EPOCHS = 24
+NUM_EPOCHS = 12
 BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
@@ -91,8 +96,7 @@ if DISC_NET_CHECKPOINT:
     disc_net.load_state_dict(state_dict)
 
 disc_net.train()
-# gan_loss = MultiScaleLoss(loss_fn=LeastSquaresLoss(disc_net))
-gan_loss = LeastSquaresLoss(disc_net)
+gan_loss = RelativisticLoss(disc_net)
 optimizer_disc = optim.AdamW(
     disc_net.parameters(),
     lr=LEARNING_RATE,
