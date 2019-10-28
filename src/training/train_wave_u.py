@@ -96,7 +96,7 @@ if DISC_NET_CHECKPOINT:
     disc_net.load_state_dict(state_dict)
 
 disc_net.train()
-gan_loss = RelativisticLoss(disc_net)
+gan_loss = MultiScaleLoss(loss_fn=RelativisticLoss(disc_net))
 optimizer_disc = optim.AdamW(
     disc_net.parameters(),
     lr=LEARNING_RATE,
