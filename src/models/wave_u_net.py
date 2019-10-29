@@ -72,6 +72,7 @@ class WaveUNet(nn.Module):
         super().__init__()
         # Construct encoders
         self.encoders = nn.ModuleList()
+        self.encoder_res_stacks = nn.ModuleList()
         layer = ConvLayer(1, NUM_C, kernel=15)
         self.encoders.append(layer)
         for i in range(1, NUM_ENCODER_LAYERS):
@@ -79,19 +80,22 @@ class WaveUNet(nn.Module):
             out_channels = (i + 1) * NUM_C
             layer = ConvLayer(in_channels, out_channels, kernel=15)
             self.encoders.append(layer)
+            res_stack = ResidualDilationStack(num_channels=out_channels)
+            self.encoder_res_stacks.append(res_stack)
 
         self.middle = ConvLayer(12 * NUM_C, 13 * NUM_C, kernel=15)
 
         # Construct decoders
-        self.upsample = nn.Upsample(
-            scale_factor=2, mode="linear", align_corners=True
-        )
+        self.upsample = nn.Upsample(scale_factor=2, mode="linear", align_corners=True)
         self.decoders = nn.ModuleList()
+        self.decoder_res_stacks = nn.ModuleList()
         for i in reversed(range(1, NUM_ENCODER_LAYERS + 1)):
             in_channels = (2 * (i + 1) - 1) * NUM_C
             out_channels = i * NUM_C
             layer = ConvLayer(in_channels, out_channels, kernel=5)
             self.decoders.append(layer)
+            res_stack = ResidualDilationStack(num_channels=out_channels)
+            self.decoder_res_stacks.append(res_stack)
 
         # Extra dimension for input
         self.output = ConvLayer(NUM_C + 1, 1, kernel=1, nonlinearity=nn.Tanh)
@@ -101,8 +105,9 @@ class WaveUNet(nn.Module):
         # (b, 1, 16384)
         acts = input_t
         skip_connections = []
-        for encoder in self.encoders:
+        for idx, encoder in enumerate(self.encoders):
             acts = encoder(acts)
+            acts = self.encoder_res_stacks[idx](acts)
             skip_connections.append(acts)
             # Decimate activations
             acts = acts[:, :, ::2]
@@ -121,6 +126,7 @@ class WaveUNet(nn.Module):
             skip = skip_connections[idx]
             acts = torch.cat((acts, skip), dim=1)
             acts = decoder(acts)
+            acts = self.decoder_res_stacks[idx](acts)
 
         # (b, 24, 16384)
         acts = torch.cat((acts, input_t), dim=1)
@@ -154,3 +160,40 @@ class ConvLayer(nn.Module):
         """
         acts = self.conv(input_t)
         return self.nonlinearity(acts)
+
+
+class ResidualDilationStack(nn.Module):
+    """
+    Residual dialtions, from MelGAN.
+    See https://github.com/seungwonpark/melgan/blob/master/model/res_stack.py
+    """
+
+    def __init__(self, num_channels):
+        super().__init__()
+        self.layers = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.PReLU(),
+                    weight_norm(
+                        nn.Conv1d(
+                            num_channels,
+                            num_channels,
+                            kernel_size=3,
+                            dilation=3 ** i,
+                            padding=3 ** i,
+                        )
+                    ),
+                    nn.PReLU(),
+                    weight_norm(
+                        nn.Conv1d(num_channels, num_channels, kernel_size=3, dilation=1, padding=1)
+                    ),
+                )
+                for i in range(3)
+            ]
+        )
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = x + layer(x)
+
+        return x

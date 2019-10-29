@@ -29,12 +29,9 @@ class MelDiscriminatorNet(nn.Module):
             conv1d(1024, 1, kernel_size=3, stride=1, padding=1),
         ]
         self.discriminator = nn.Sequential(*layers)
-        self.linear = nn.Linear(128, 1)
 
     def forward(self, input_t):
-        acts = self.discriminator(input_t)
-        acts = acts.squeeze(dim=1)
-        return self.linear(acts)
+        return self.discriminator(input_t)
 
 
 def conv1d(in_channels, out_channels, **kwargs):

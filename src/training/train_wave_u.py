@@ -22,10 +22,10 @@ from ..utils.loss import (
 from ..utils.checkpoint import save_checkpoint
 
 # Runtime flags
-USE_WANDB = True
-USE_CUDA = True
+USE_WANDB = False
+USE_CUDA = False
 # Dataset
-SUBSAMPLE = None
+SUBSAMPLE = 8
 # Checkpointing
 U_NET_CHECKPOINT = None
 DISC_NET_CHECKPOINT = None
@@ -96,7 +96,7 @@ if DISC_NET_CHECKPOINT:
     disc_net.load_state_dict(state_dict)
 
 disc_net.train()
-gan_loss = RelativisticAverageStandardGANLoss(disc_net)
+gan_loss = LeastSquaresLoss(disc_net)
 optimizer_disc = optim.AdamW(
     disc_net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
