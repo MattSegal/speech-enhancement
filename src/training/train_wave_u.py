@@ -33,7 +33,7 @@ LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 CHECKPOINT_EPOCHS = 4
 CHECKPOINT_NAME = "wave-u-net"
 DISC_NET_CHECKPOINT_NAME = "disc-net"
-WANDB_NAME = "try-rel-sigmoid"
+WANDB_NAME = "try-resstacks"
 # Training hyperparams
 NUM_EPOCHS = 12
 BATCH_SIZE = 8
