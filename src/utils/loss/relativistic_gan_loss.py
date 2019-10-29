@@ -16,8 +16,8 @@ class RelativisticAverageStandardGANLoss:
 
     def for_generator(self, real_audio, fake_audio):
         batch_size = real_audio.shape[0]
-        zeros = torch.zeros([batch_size, 1], dtype=torch.float32)
-        ones = torch.ones([batch_size, 1], dtype=torch.float32)
+        zeros = torch.zeros([batch_size, 1], dtype=torch.float32).cuda()
+        ones = torch.ones([batch_size, 1], dtype=torch.float32).cuda()
         disc_real = self.disc_net(real_audio)
         disc_fake = self.disc_net(fake_audio)
         mean_disc_fake = torch.mean(disc_fake)
@@ -28,8 +28,8 @@ class RelativisticAverageStandardGANLoss:
 
     def for_discriminator(self, real_audio, fake_audio):
         batch_size = real_audio.shape[0]
-        zeros = torch.zeros([batch_size, 1], dtype=torch.float32)
-        ones = torch.ones([batch_size, 1], dtype=torch.float32)
+        zeros = torch.zeros([batch_size, 1], dtype=torch.float32).cuda()
+        ones = torch.ones([batch_size, 1], dtype=torch.float32).cuda()
         disc_real = self.disc_net(real_audio)
         disc_fake = self.disc_net(fake_audio)
         mean_disc_fake = torch.mean(disc_fake)
