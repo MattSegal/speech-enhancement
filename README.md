@@ -4,46 +4,6 @@ Try to replicate Speech Denoising with Deep Feature Losses ([arXiv](https://arxi
 
 Code and concepts borrowed from [Francois Germain's repo](https://github.com/francoisgermain/SpeechDenoisingWithDeepFeatureLosses)
 
-**Status**: Currently trying to train the audio classifier network that is used for the loss function - training goes poorly.
-
-https://towardsdatascience.com/a-data-lakes-worth-of-audio-datasets-b45b88cd4ad
-
-## RUNS
-
-- A1
-  small dataset (18 batches of 28), 1 feature layer, track MSE, see what 10 epochs achieves
-  what does small dataset do?
-  how well does MSE loss correspond to good audio output?
-  is 1 top of stack feature vector enough for the loss function?
-  then check model quality in notebook
-
-  in general loss and MSE are both decreasing (which is good)
-  both training and validation loss / MSE are very similar (yay!)
-  improvement plateus at about about 12 epochs
-  ~0.95 loss
-  ~0.009 MSE
-
-- B1
-  same as A but whole dataset (414 batches of 28)
-  slightly better than A1 but not so different
-
-- A2 try 12 epochs with pre-pooling feature layer
-
-## TODO
-
-- Turn off weight decay, see what happens (nothing much)
-- Try this moving loss function feature weights thing
-- Try gradient checkpointing then make the model 2x bigger
-  https://github.com/prigoyal/pytorch_memonger/blob/master/tutorial/Checkpointing_for_PyTorch_models.ipynb
-- Look into raw audio tips
-- Try train a resnet / VGG on images to sanity check architecture
-- Try to reproduce an image denoising algo
-
-## Ideas
-
-- use human voice domain dataset for acoustic scene classifier
-- look into Double-DIP algorithm for further ideas on denoising
-
 ### Getting started
 
 This should get you 80% of the way there.

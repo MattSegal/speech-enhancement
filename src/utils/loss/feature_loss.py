@@ -10,13 +10,14 @@ class AudioFeatureLoss:
     between two feature vectors produced by the supplied loss network
     """
 
-    def __init__(self, loss_net):
+    def __init__(self, loss_net, use_cuda=True):
         """
         Store loss net for use in calculating feature vectors.
         Loss net must accept a tensor (batch_size, 1, audio_length)
         And expose property `feature_layers` - which returns a list of weight vectors.
         """
         self.loss_net = loss_net
+        self.use_cuda = use_cuda
 
     def get_feature_loss(self, predicted_audio, target_audio):
         assert predicted_audio.shape == target_audio.shape
@@ -32,12 +33,13 @@ class AudioFeatureLoss:
         target_feature_layers = self.loss_net.feature_layers
 
         # Sum up l1 losses over all feature layers.
-        loss = torch.tensor([0.0], requires_grad=True).cuda()
+        loss = torch.tensor([0.0], requires_grad=True)
+        loss = loss.cuda() if self.use_cuda else loss
         for idx in range(len(pred_feature_layers)):
 
             predicted_feature = pred_feature_layers[idx]
             target_feature = target_feature_layers[idx]
-            loss.add_(l1_loss(predicted_feature, target_feature))
+            loss = loss + l1_loss(predicted_feature, target_feature)
 
         return loss
 

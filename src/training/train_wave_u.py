@@ -15,6 +15,7 @@ from ..utils.trackers import MovingAverage
 from ..utils.loss import (
     AudioFeatureLoss,
     RelativisticLoss,
+    RelativisticAverageStandardGANLoss,
     LeastSquaresLoss,
     MultiScaleLoss,
 )
@@ -32,7 +33,7 @@ LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
 CHECKPOINT_EPOCHS = 4
 CHECKPOINT_NAME = "wave-u-net"
 DISC_NET_CHECKPOINT_NAME = "disc-net"
-WANDB_NAME = None
+WANDB_NAME = "try-rel-sigmoid"
 # Training hyperparams
 NUM_EPOCHS = 12
 BATCH_SIZE = 8
@@ -61,17 +62,16 @@ training_set = SpeechDataset(train=True, subsample=SUBSAMPLE)
 validation_set = SpeechDataset(train=False, subsample=SUBSAMPLE)
 
 # Construct data loaders
-training_data_loader = DataLoader(
-    training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
-)
+training_data_loader = DataLoader(training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3)
 validation_data_loader = DataLoader(
     validation_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
 )
 
 # Initialize model
+map_location = None if USE_CUDA else torch.device("cpu")
 net = WaveUNet().cuda() if USE_CUDA else WaveUNet().cpu()
 if U_NET_CHECKPOINT:
-    state_dict = torch.load(U_NET_CHECKPOINT)
+    state_dict = torch.load(U_NET_CHECKPOINT, map_location=map_location)
     net.load_state_dict(state_dict)
 
 # Initialize optmizer
@@ -82,26 +82,23 @@ if USE_WANDB:
     wandb.watch(net)
 
 # Initialize feature loss function
-loss_net = SceneNet().cuda()
-state_dict = torch.load(LOSS_NET_CHECKPOINT)
+loss_net = SceneNet().cuda() if USE_CUDA else SceneNet().cpu()
+state_dict = torch.load(LOSS_NET_CHECKPOINT, map_location=map_location)
 loss_net.load_state_dict(state_dict)
 loss_net.eval()
 loss_net.set_feature_mode()
-feature_loss_criterion = AudioFeatureLoss(loss_net)
+feature_loss_criterion = AudioFeatureLoss(loss_net, use_cuda=USE_CUDA)
 
 # Initialize discriminator loss function, optimizer
 disc_net = MelDiscriminatorNet().cuda() if USE_CUDA else MelDiscriminatorNet().cpu()
 if DISC_NET_CHECKPOINT:
-    state_dict = torch.load(LOSS_NET_CHECKPOINT)
+    state_dict = torch.load(LOSS_NET_CHECKPOINT, map_location=map_location)
     disc_net.load_state_dict(state_dict)
 
 disc_net.train()
-gan_loss = MultiScaleLoss(loss_fn=RelativisticLoss(disc_net))
+gan_loss = RelativisticAverageStandardGANLoss(disc_net)
 optimizer_disc = optim.AdamW(
-    disc_net.parameters(),
-    lr=LEARNING_RATE,
-    betas=ADAM_BETAS,
-    weight_decay=WEIGHT_DECAY,
+    disc_net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
 )
 
 # Keep track of loss history using moving average
@@ -218,9 +215,7 @@ if CHECKPOINT_NAME:
 
 # Save final discriminator checkpoint
 if DISC_NET_CHECKPOINT_NAME:
-    checkpoint_path = save_checkpoint(
-        disc_net, DISC_NET_CHECKPOINT_NAME, name=WANDB_NAME
-    )
+    checkpoint_path = save_checkpoint(disc_net, DISC_NET_CHECKPOINT_NAME, name=WANDB_NAME)
     # Upload model to wandb
     if USE_WANDB:
         print(f"Uploading {checkpoint_path} to W&B")
