@@ -107,7 +107,9 @@ class WaveUNet(nn.Module):
         skip_connections = []
         for idx, encoder in enumerate(self.encoders):
             acts = encoder(acts)
-            acts = self.encoder_res_stacks[idx](acts)
+            if idx > 0:
+                acts = self.encoder_res_stacks[idx - 1](acts)
+
             skip_connections.append(acts)
             # Decimate activations
             acts = acts[:, :, ::2]
