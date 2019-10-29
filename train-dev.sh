@@ -1,4 +1,3 @@
 #! /bin/bash
-git pull
 . ./env/bin/activate
-./train-local.py
+python -m src dev

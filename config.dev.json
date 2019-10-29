@@ -1,0 +1,5 @@
+{
+  "cuda": false,
+  "epochs": 1000,
+  "subsample": 8
+}
