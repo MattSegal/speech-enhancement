@@ -1,3 +1,5 @@
 #! /bin/bash
-. ./env/bin/activate
-python -m src dev
+if [[ -d "env" ]]; then
+    . ./env/bin/activate
+fi
+python -W ignore -m src dev

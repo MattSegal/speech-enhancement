@@ -9,11 +9,7 @@ tqdm
 
 # Exploration
 jupyter
-pandas 
 matplotlib 
-pandas_summary 
-feather-format 
-sklearn
 
 # Utiltiies
 requests

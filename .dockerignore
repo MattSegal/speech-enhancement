@@ -1,0 +1,5 @@
+# Stuff for docker not to add to container
+.vscode/
+data/
+env/
+wandb/

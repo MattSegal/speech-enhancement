@@ -19,12 +19,11 @@ from ..utils.loss import (
     LeastSquaresLoss,
     MultiScaleLoss,
 )
-from ..utils.checkpoint import save_checkpoint
+from ..utils import checkpoint
+from ..utils.log import log_training_info
 
 # Checkpointing
-U_NET_CHECKPOINT = None
-DISC_NET_CHECKPOINT = None
-LOSS_NET_CHECKPOINT = "checkpoints/scene-net-long-train.ckpt"
+LOSS_NET_CHECKPOINT = "scene-net-long-train.ckpt"
 CHECKPOINT_NAME = "wave-u-net"
 WANDB_PROJECT = "wave-u-net"
 DISC_NET_CHECKPOINT_NAME = "disc-net"
@@ -65,41 +64,43 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
     )
 
     # Initialize model
-    map_location = None if use_cuda else torch.device("cpu")
     net = WaveUNet().cuda() if use_cuda else WaveUNet().cpu()
-    if U_NET_CHECKPOINT:
-        state_dict = torch.load(U_NET_CHECKPOINT, map_location=map_location)
-        net.load_state_dict(state_dict)
-
-    # Initialize optmizer
-    optimizer = optim.AdamW(
-        net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
-    )
     if use_wandb:
         wandb.watch(net)
 
+    # Initialize optmizer
+    optimizer = optim.AdamW(
+        net.parameters(),
+        lr=LEARNING_RATE,
+        betas=ADAM_BETAS,
+        weight_decay=WEIGHT_DECAY,
+    )
+
     # Initialize feature loss function
-    loss_net = SceneNet().cuda() if use_cuda else SceneNet().cpu()
-    state_dict = torch.load(LOSS_NET_CHECKPOINT, map_location=map_location)
-    loss_net.load_state_dict(state_dict)
+    loss_net = checkpoint.load(
+        LOSS_NET_CHECKPOINT, net=SceneNet(), use_cuda=use_cuda
+    )
     loss_net.eval()
     loss_net.set_feature_mode()
     feature_loss_criterion = AudioFeatureLoss(loss_net, use_cuda=use_cuda)
 
     # Initialize discriminator loss function, optimizer
-    disc_net = MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
-    if DISC_NET_CHECKPOINT:
-        state_dict = torch.load(LOSS_NET_CHECKPOINT, map_location=map_location)
-        disc_net.load_state_dict(state_dict)
+    disc_net = (
+        MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
+    )
 
     disc_net.train()
     gan_loss = LeastSquaresLoss(disc_net)
     optimizer_disc = optim.AdamW(
-        disc_net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
+        disc_net.parameters(),
+        lr=LEARNING_RATE,
+        betas=ADAM_BETAS,
+        weight_decay=WEIGHT_DECAY,
     )
 
     # Keep track of loss history using moving average
     disc_loss = MovingAverage(decay=0.8)
+    gen_loss = MovingAverage(decay=0.8)
     training_loss = MovingAverage(decay=0.8)
     validation_loss = MovingAverage(decay=0.8)
     mean_squared_error = nn.MSELoss()
@@ -114,9 +115,9 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
         # Save checkpoint periodically.
         is_checkpoint_epoch = checkpoint_epochs and epoch % checkpoint_epochs == 0
         if CHECKPOINT_NAME and is_checkpoint_epoch:
-            save_checkpoint(net, CHECKPOINT_NAME, name=wandb_name)
+            checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name)
         if DISC_NET_CHECKPOINT_NAME and is_checkpoint_epoch:
-            save_checkpoint(disc_net, DISC_NET_CHECKPOINT_NAME, name=wandb_name)
+            checkpoint.save(disc_net, DISC_NET_CHECKPOINT_NAME, name=wandb_name)
 
         # Run training loop
         net.train()
@@ -157,6 +158,8 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
             training_loss.update(loss_amount)
             mse = mean_squared_error(outputs, targets).data.item()
             training_mse.update(mse)
+            loss_amount = gen_gan_loss.data.item()
+            gen_loss.update(loss_amount)
 
             # Train discriminator
             optimizer_disc.zero_grad()
@@ -186,33 +189,25 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
                 mse = mean_squared_error(outputs, targets).data.item()
                 validation_mse.update(mse)
 
-        # Log training information for this epoch.
-        training_info = {
-            "Training Feature Loss": training_loss.value,
-            "Validation Feature Loss": validation_loss.value,
-            "Training Loss": training_mse.value,
-            "Validation Loss": validation_mse.value,
-            "Discriminator Loss": disc_loss.value,
-        }
-        print("")
-        for k, v in training_info.items():
-            s = "{k: <30}{v:0.4f}".format(k=k, v=v)
-            print(s)
-        if use_wandb:
-            wandb.log(training_info)
+        log_training_info(
+            {
+                "Training Feature Loss": training_loss.value,
+                "Validation Feature Loss": validation_loss.value,
+                "Training Loss": training_mse.value,
+                "Validation Loss": validation_mse.value,
+                "Discriminator Loss": disc_loss.value,
+                "Generator Loss": gen_loss.value,
+            },
+            use_wandb=use_wandb,
+        )
 
     # Save final model checkpoint
     if CHECKPOINT_NAME:
-        checkpoint_path = save_checkpoint(net, CHECKPOINT_NAME, name=wandb_name)
-        # Upload model to wandb
-        if use_wandb:
-            print(f"Uploading {checkpoint_path} to W&B")
-            wandb.save(checkpoint_path)
+        checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
 
     # Save final discriminator checkpoint
     if DISC_NET_CHECKPOINT_NAME:
-        checkpoint_path = save_checkpoint(disc_net, DISC_NET_CHECKPOINT_NAME, name=wandb_name)
-        # Upload model to wandb
-        if use_wandb:
-            print(f"Uploading {checkpoint_path} to W&B")
-            wandb.save(checkpoint_path)
+        checkpoint.save(
+            net, DISC_NET_CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb
+        )
+

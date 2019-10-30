@@ -32,3 +32,11 @@ At the moment, this algorithm requires using 32-bit floating-point audio files t
 ```bash
 sox audiofile.wav -r 16000 -b 32 -e float audiofile.float.wav
 ```
+
+### Training
+
+Requires GCloud SDK
+https://cloud.google.com/sdk/docs/
+https://cloud.google.com/ml-engine/docs/custom-containers-training
+
+gs://matt-ml
