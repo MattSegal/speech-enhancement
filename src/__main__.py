@@ -2,7 +2,7 @@ import json
 
 import click
 
-from .training.train_wave_u import train
+from .training.train_skip import train
 
 
 @click.group()

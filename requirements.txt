@@ -3,6 +3,9 @@ torch
 numpy 
 scipy
 
+# Image processing
+Pillow
+
 # Training
 wandb
 tqdm 
