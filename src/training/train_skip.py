@@ -15,7 +15,8 @@ NUM_EPOCHS = 2000
 NOISE_REG = 0.03
 NOISE_CHANNELS = 32
 IMAGE_NAME = "dogs"
-IMAGE_PATH = "data/deep-image-prior/dogs.jpg"
+IMAGE_EXT = "jpg"
+IMAGE_PATH = f"data/deep-image-prior/{IMAGE_NAME}/original.{IMAGE_EXT}"
 SIZE_FACTOR = 4
 LEARNING_RATE = 1e-2
 UPSCALE_FACTOR = 1
@@ -23,7 +24,6 @@ UPSCALE_FACTOR = 1
 
 def train(*args, **kwargs):
     net = SkipNet().cuda()
-    # downsample = Downsampler(factor=SIZE_FACTOR).cuda()
     criterion = nn.MSELoss()
 
     # Load low res image
@@ -67,7 +67,7 @@ def save_image_tensor(image_t, name):
     image_arr = image_t.squeeze(dim=0).permute([1, 2, 0]).cpu().detach().numpy()
     image_arr_int = np.clip(image_arr * 255, 0, 255).astype(np.uint8)
     img = Image.fromarray(image_arr_int)
-    img.save(IMAGE_PATH.replace(IMAGE_NAME, name))
+    img.save(IMAGE_PATH.replace("original", name))
 
 
 def load_image():
@@ -84,7 +84,7 @@ def load_image():
     ]
     img_cropped = img.crop(bounding_box)
     # Save cropped image
-    img_cropped.save(IMAGE_PATH.replace(IMAGE_NAME, "cropped"))
+    img_cropped.save(IMAGE_PATH.replace("original", "cropped"))
     # Downsample image
     low_res_size = [
         img_cropped.size[0] // SIZE_FACTOR,
@@ -92,7 +92,7 @@ def load_image():
     ]
     img_low_res = img_cropped.resize(low_res_size, Image.ANTIALIAS)
     # Save low res image
-    img_low_res.save(IMAGE_PATH.replace(IMAGE_NAME, "low_res"))
+    img_low_res.save(IMAGE_PATH.replace("original", "low_res"))
     # Image has shape (H, W, C), rearrange to (1, C, H, W) and
     # turn ints 0 to 255 to floats 0 to 1
     img_arr = np.asarray(img_low_res).astype(np.float32) / 255.0
