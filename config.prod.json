@@ -1,5 +1,5 @@
 {
   "cuda": true,
-  "wandb_name": "try-resstacks",
-  "epochs": 26
+  "wandb_name": "try-exl-loss",
+  "epochs": 20
 }
