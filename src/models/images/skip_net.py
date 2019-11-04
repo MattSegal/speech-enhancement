@@ -5,29 +5,27 @@ https://github.com/DmitryUlyanov/deep-image-prior
 import torch
 from torch import nn
 
-NUM_LAYERS = 5
-
 
 class SkipNet(nn.Module):
-    def __init__(self):
+    def __init__(self, num_layers=5):
         super().__init__()
         # Build encoders
         self.encoders = nn.ModuleList()
         in_channels = 32
-        for idx in range(NUM_LAYERS):
+        for idx in range(num_layers):
             layer = get_encoder_layer(in_c=in_channels, out_c=128)
             self.encoders.append(layer)
             in_channels = 128
 
         # Build skips
         self.skips = nn.ModuleList()
-        for idx in range(NUM_LAYERS):
+        for idx in range(num_layers):
             layer = get_skip_layer(in_c=128, out_c=4)
             self.skips.append(layer)
 
         # Build decoders
         self.decoders = nn.ModuleList()
-        for idx in range(NUM_LAYERS):
+        for idx in range(num_layers):
             layer = get_decoder_layer(in_c=132, out_c=128)
             self.decoders.append(layer)
 
@@ -64,6 +62,7 @@ class SkipNet(nn.Module):
 def get_decoder_layer(in_c, out_c):
     padder = nn.ReflectionPad2d(padding=1)
     layers = [
+        nn.BatchNorm2d(num_features=in_c),
         padder,
         nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=3, padding=0),
         nn.BatchNorm2d(num_features=out_c),
@@ -71,14 +70,14 @@ def get_decoder_layer(in_c, out_c):
         nn.Conv2d(in_channels=out_c, out_channels=out_c, kernel_size=1, padding=0),
         nn.BatchNorm2d(num_features=out_c),
         nn.LeakyReLU(),
-        nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
+        nn.Upsample(scale_factor=2, mode="bilinear"),
     ]
     return nn.Sequential(*layers)
 
 
 def get_skip_layer(in_c, out_c):
     layers = [
-        nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=1, padding=0, bias=False),
+        nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=1, padding=0),
         nn.BatchNorm2d(num_features=out_c),
         nn.LeakyReLU(),
     ]
@@ -90,12 +89,12 @@ def get_encoder_layer(in_c, out_c):
     layers = [
         padder,
         nn.Conv2d(
-            in_channels=in_c, out_channels=out_c, kernel_size=3, padding=0, stride=2, bias=False
+            in_channels=in_c, out_channels=out_c, kernel_size=3, padding=0, stride=2
         ),
         nn.BatchNorm2d(num_features=out_c),
         nn.LeakyReLU(),
         padder,
-        nn.Conv2d(in_channels=out_c, out_channels=out_c, kernel_size=3, padding=0, bias=False),
+        nn.Conv2d(in_channels=out_c, out_channels=out_c, kernel_size=3, padding=0),
         nn.BatchNorm2d(num_features=out_c),
         nn.LeakyReLU(),
     ]
