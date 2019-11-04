@@ -14,12 +14,11 @@ from ..models.images.skip_net import SkipNet
 NUM_EPOCHS = 2000
 NOISE_REG = 0.03
 NOISE_CHANNELS = 32
-IMAGE_NAME = "dogs"
-IMAGE_EXT = "jpg"
+IMAGE_NAME = "zebra"
+IMAGE_EXT = "png"
 IMAGE_PATH = f"data/deep-image-prior/{IMAGE_NAME}/original.{IMAGE_EXT}"
 SIZE_FACTOR = 4
 LEARNING_RATE = 1e-2
-UPSCALE_FACTOR = 1
 
 
 def train(*args, **kwargs):
@@ -30,8 +29,8 @@ def train(*args, **kwargs):
     low_res_img = load_image().cuda()
 
     # Create uniform noise
-    img_h = UPSCALE_FACTOR * SIZE_FACTOR * low_res_img.shape[2]
-    img_w = UPSCALE_FACTOR * SIZE_FACTOR * low_res_img.shape[3]
+    img_h = SIZE_FACTOR * low_res_img.shape[2]
+    img_w = SIZE_FACTOR * low_res_img.shape[3]
     inputs_shape = [1, NOISE_CHANNELS, img_h, img_w]
     inputs = torch.zeros(inputs_shape).detach().uniform_().cuda()
     noise = torch.zeros(inputs.shape).detach().cuda()
@@ -44,11 +43,8 @@ def train(*args, **kwargs):
         inputs_reg = inputs + noise.normal_() * NOISE_REG
         optimizer.zero_grad()
         gen_image_high_res = net(inputs_reg)
-        # gen_image_low_res = downsample(gen_image_high_res)
         gen_image_low_res = interpolate(
-            gen_image_high_res,
-            scale_factor=(1 / SIZE_FACTOR / UPSCALE_FACTOR),
-            mode="bilinear",
+            gen_image_high_res, scale_factor=(1 / SIZE_FACTOR), mode="bilinear"
         )
         loss = criterion(gen_image_low_res, low_res_img)
         loss.backward()
