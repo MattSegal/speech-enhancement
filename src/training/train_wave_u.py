@@ -24,7 +24,7 @@ from ..utils import checkpoint
 from ..utils.log import log_training_info
 
 # Checkpointing
-LOSS_NET_CHECKPOINT = "scene-net-long-train.ckpt"
+LOSS_NET_CHECKPOINT = "saved/scene-net-long-train.ckpt"
 CHECKPOINT_NAME = "wave-u-net"
 WANDB_PROJECT = "wave-u-net"
 DISC_NET_CHECKPOINT_NAME = "disc-net"
