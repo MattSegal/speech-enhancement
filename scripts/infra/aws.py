@@ -5,9 +5,71 @@ import boto3
 import timeago
 from tabulate import tabulate
 
+import settings
+
 client = boto3.client("ec2")
 
 DESCRIBE_KEYS = ["InstanceId", "InstanceType", "LaunchTime", "State"]
+
+
+class NoInstanceAvailable(Exception):
+    pass
+
+
+def run_job(job_id: str):
+    instance_type = None
+    instances = describe_instances()
+    for i_type in settings.EC2_LAUNCH_PREFERENCE:
+        num_type = sum([i["InstanceType"] == i_type for i in instances])
+        if num_type < settings.EC2_INSTANCE_TYPE_LIMIT:
+            instance_type = i_type
+            break
+
+    if not instance_type:
+        raise NoInstanceAvailable("No instances available.")
+    else:
+        run_instance(job_id, instance_type)
+
+
+def stop_job(job_id: str):
+    instance_ids = [
+        i["InstanceId"] for i in describe_instances() if i["name"] == job_id
+    ]
+    client.terminate_instances(InstanceIds=instance_ids)
+
+
+def cleanup_volumes():
+    volumes = client.describe_volumes()
+    volume_ids = [
+        v["VolumeId"] for v in volumes["Volumes"] if v["State"] == "available"
+    ]
+    for v_id in volume_ids:
+        print(f"Deleting orphaned volume {v_id}")
+        client.delete_volume(VolumeId=v_id)
+
+
+def run_instance(job_id: str, instance_type: str):
+    print(f"Creating EC2 instance {instance_type} for job {job_id}")
+    client.run_instances(
+        MaxCount=1,
+        MinCount=1,
+        ImageId=settings.EC2_AMI,
+        InstanceType=instance_type,
+        SecurityGroupIds=[settings.EC2_SECURITY_GROUP],
+        KeyName="wizard",
+        ClientToken=job_id,  # For idempotent request
+        InstanceInitiatedShutdownBehavior="terminate",
+        InstanceMarketOptions={
+            "MarketType": "spot",
+            "SpotOptions": {
+                "MaxPrice": settings.EC2_SPOT_MAX_PRICE,
+                "SpotInstanceType": "one-time",
+            },
+        },
+        TagSpecifications=[
+            {"ResourceType": "instance", "Tags": [{"Key": "Name", "Value": job_id}]}
+        ],
+    )
 
 
 def find_instance(name):
@@ -15,8 +77,6 @@ def find_instance(name):
     for instance in instances:
         if instance["name"] == name:
             return instance
-
-    return None
 
 
 def start_instance(instance):
@@ -41,10 +101,18 @@ def print_status(instances):
     now = datetime.utcnow().replace(tzinfo=tzutc())
     print("\nEC2 instance statuses\n")
     table_data = [
-        [i["name"], i["State"]["Name"], i["ip"], timeago.format(i["LaunchTime"], now)]
+        [
+            i["name"],
+            i["InstanceType"],
+            i["State"]["Name"],
+            i["ip"],
+            timeago.format(i["LaunchTime"], now),
+        ]
         for i in instances
     ]
-    table_str = tabulate(table_data, headers=["Name", "Status", "IP", "Launched"])
+    table_str = tabulate(
+        table_data, headers=["Name", "Type", "Status", "IP", "Launched"]
+    )
     print(table_str, "\n")
 
 
