@@ -49,3 +49,5 @@ RUN  \
 
 # Mount the codebase
 ADD . /app
+
+ENTRYPOINT ["scripts/docker/entrypoint.sh"]
