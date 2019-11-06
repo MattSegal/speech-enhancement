@@ -2,4 +2,4 @@
 if [[ -d "env" ]]; then
     . ./env/bin/activate
 fi
-python -W ignore -m src dev
+python3.6 -W ignore -m src dev

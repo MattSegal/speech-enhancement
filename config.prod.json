@@ -1,5 +1,6 @@
 {
   "cuda": true,
-  "wandb_name": "try-exl-loss",
-  "epochs": 20
+  "wandb_name": "new-baseline",
+  "checkpoint_epochs": 6,
+  "epochs": 26
 }

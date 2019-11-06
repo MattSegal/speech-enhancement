@@ -18,7 +18,6 @@ from ..utils.loss import (
     RelativisticAverageStandardGANLoss,
     LeastSquaresLoss,
     MultiScaleLoss,
-    exclusion_loss as get_exclusion_loss,
 )
 from ..utils import checkpoint
 from ..utils.log import log_training_info
@@ -34,8 +33,7 @@ BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
-DISC_WEIGHT = 1e-2
-FEATURE_WEIGHT = 1e-1
+DISC_WEIGHT = 1e-1
 
 
 def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
@@ -72,28 +70,36 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
     # Initialize optmizer
     optimizer = optim.AdamW(
-        net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
+        net.parameters(),
+        lr=LEARNING_RATE,
+        betas=ADAM_BETAS,
+        weight_decay=WEIGHT_DECAY,
     )
 
     # Initialize feature loss function
-    loss_net = checkpoint.load(LOSS_NET_CHECKPOINT, net=SceneNet(), use_cuda=use_cuda)
+    loss_net = checkpoint.load(
+        LOSS_NET_CHECKPOINT, net=SceneNet(), use_cuda=use_cuda
+    )
     loss_net.eval()
     loss_net.set_feature_mode()
     feature_loss_criterion = AudioFeatureLoss(loss_net, use_cuda=use_cuda)
 
     # Initialize discriminator loss function, optimizer
-    disc_net = MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
+    disc_net = (
+        MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
+    )
 
     disc_net.train()
     gan_loss = LeastSquaresLoss(disc_net)
     optimizer_disc = optim.AdamW(
-        disc_net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
+        disc_net.parameters(),
+        lr=LEARNING_RATE,
+        betas=ADAM_BETAS,
+        weight_decay=WEIGHT_DECAY,
     )
 
     # Keep track of loss history using moving average
     disc_loss = MovingAverage(decay=0.8)
-    exl_loss = MovingAverage(decay=0.8)
-
     gen_loss = MovingAverage(decay=0.8)
     training_loss = MovingAverage(decay=0.8)
     validation_loss = MovingAverage(decay=0.8)
@@ -109,9 +115,9 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
         # Save checkpoint periodically.
         is_checkpoint_epoch = checkpoint_epochs and epoch % checkpoint_epochs == 0
         if CHECKPOINT_NAME and is_checkpoint_epoch:
-            checkpoint.save_state_dict(net, CHECKPOINT_NAME, name=wandb_name)
+            checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name)
         if DISC_NET_CHECKPOINT_NAME and is_checkpoint_epoch:
-            checkpoint.save_state_dict(disc_net, DISC_NET_CHECKPOINT_NAME, name=wandb_name)
+            checkpoint.save(disc_net, DISC_NET_CHECKPOINT_NAME, name=wandb_name)
 
         # Run training loop
         net.train()
@@ -120,9 +126,9 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
             targets = targets.cuda() if use_cuda else targets.cpu()
 
             # 10% of the time, have no noise at all
-            # is_clean_input = random.random() <= 0.1
-            # if is_clean_input:
-            #     inputs = targets
+            is_clean_input = random.random() <= 0.1
+            if is_clean_input:
+                inputs = targets
 
             # Add channel dimension to input
             batch_size = inputs.shape[0]
@@ -143,10 +149,7 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
             fake_audio = outputs.view(batch_size, 1, -1)
             gen_gan_loss = gan_loss.for_generator(inputs, fake_audio)
 
-            # Add exclusion loss to loss
-            exclusion_loss = get_exclusion_loss(inputs, outputs, targets)
-
-            loss = FEATURE_WEIGHT * feature_loss + DISC_WEIGHT * gen_gan_loss + exclusion_loss
+            loss = feature_loss + DISC_WEIGHT * gen_gan_loss
 
             # Calculate model weight gradients from the loss and update model.
             loss.backward()
@@ -159,7 +162,6 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
             training_mse.update(mse)
             loss_amount = gen_gan_loss.data.item()
             gen_loss.update(loss_amount)
-            exl_loss.update(exclusion_loss.item())
 
             # Train discriminator
             optimizer_disc.zero_grad()
@@ -197,18 +199,17 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
                 "Validation Loss": validation_mse.value,
                 "Discriminator Loss": disc_loss.value,
                 "Generator Loss": gen_loss.value,
-                "Exclusion Loss": exl_loss.value,
             },
             use_wandb=use_wandb,
         )
 
     # Save final model checkpoint
     if CHECKPOINT_NAME:
-        checkpoint.save_state_dict(net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
+        checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
 
     # Save final discriminator checkpoint
     if DISC_NET_CHECKPOINT_NAME:
-        checkpoint.save_state_dict(
+        checkpoint.save(
             net, DISC_NET_CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb
         )
 

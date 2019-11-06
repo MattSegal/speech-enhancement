@@ -4,6 +4,8 @@ import time
 import torch
 import wandb
 
+from . import s3
+
 CHECKPOINT_DIR = "checkpoints"
 
 
@@ -25,10 +27,11 @@ def save(net, prefix, name=None, use_wandb=False):
     Save full model checkpoint to disk
     """
     checkpoint_filename = get_checkpoint_filename(prefix, name, suffix="full.ckpt")
-    print(f"\nSaving checkpoint model as {checkpoint_filename}\n")
+    print(f"\nSaving checkpoint model as {checkpoint_filename}... ", end="")
     checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
     torch.save(net, checkpoint_path)
-
+    s3.upload_file(CHECKPOINT_DIR, checkpoint_path)
+    print(f"done\n")
     if use_wandb:
         # Upload model to wandb
         print(f"Uploading {checkpoint_path} to W&B")
@@ -42,9 +45,11 @@ def save_state_dict(net, prefix, name=None, use_wandb=False):
     Save model state dict checkpoint to disk
     """
     checkpoint_filename = get_checkpoint_filename(prefix, name, suffix="ckpt")
-    print(f"\nSaving checkpoint state dict as {checkpoint_filename}\n")
+    print(f"\nSaving checkpoint state dict as {checkpoint_filename}... ", end="")
     checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
     torch.save(net.state_dict(), checkpoint_path)
+    s3.upload_file(CHECKPOINT_DIR, checkpoint_path)
+    print(f"done\n")
     if use_wandb:
         # Upload model to wandb
         print(f"Uploading {checkpoint_path} to W&B")
