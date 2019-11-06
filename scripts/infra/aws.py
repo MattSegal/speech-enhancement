@@ -32,24 +32,22 @@ def run_job(job_id: str):
 
 
 def stop_job(job_id: str):
-    instance_ids = [
-        i["InstanceId"] for i in describe_instances() if i["name"] == job_id
-    ]
+    print(f"Stopping EC2 instances running job {job_id}... ", end="")
+    instance_ids = [i["InstanceId"] for i in describe_instances() if i["name"] == job_id]
     client.terminate_instances(InstanceIds=instance_ids)
+    print("request sent.")
 
 
 def cleanup_volumes():
     volumes = client.describe_volumes()
-    volume_ids = [
-        v["VolumeId"] for v in volumes["Volumes"] if v["State"] == "available"
-    ]
+    volume_ids = [v["VolumeId"] for v in volumes["Volumes"] if v["State"] == "available"]
     for v_id in volume_ids:
         print(f"Deleting orphaned volume {v_id}")
         client.delete_volume(VolumeId=v_id)
 
 
 def run_instance(job_id: str, instance_type: str):
-    print(f"Creating EC2 instance {instance_type} for job {job_id}")
+    print(f"Creating EC2 instance {instance_type} for job {job_id}... ", end="")
     client.run_instances(
         MaxCount=1,
         MinCount=1,
@@ -70,6 +68,7 @@ def run_instance(job_id: str, instance_type: str):
             {"ResourceType": "instance", "Tags": [{"Key": "Name", "Value": job_id}]}
         ],
     )
+    print("request sent.")
 
 
 def find_instance(name):
@@ -110,9 +109,7 @@ def print_status(instances):
         ]
         for i in instances
     ]
-    table_str = tabulate(
-        table_data, headers=["Name", "Type", "Status", "IP", "Launched"]
-    )
+    table_str = tabulate(table_data, headers=["Name", "Type", "Status", "IP", "Launched"])
     print(table_str, "\n")
 
 

@@ -16,6 +16,7 @@
       "instance_type": "g3s.xlarge",
       "ssh_username": "ubuntu",
       "ami_name": "deep-learning-{{timestamp}}",
+      "iam_instance_profile": "deeplearning",
       "launch_block_device_mappings": [
         {
           "device_name": "/dev/sda1",
