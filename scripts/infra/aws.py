@@ -56,7 +56,6 @@ def run_instance(job_id: str, instance_type: str):
         SecurityGroupIds=[settings.EC2_SECURITY_GROUP],
         IamInstanceProfile={"Name": "deeplearning"},
         KeyName="wizard",
-        ClientToken=job_id,  # For idempotent request
         InstanceInitiatedShutdownBehavior="terminate",
         InstanceMarketOptions={
             "MarketType": "spot",
