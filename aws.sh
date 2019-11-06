@@ -1,3 +1,5 @@
 #! /bin/bash
-. env/bin/activate
-python3 scripts/infra $@
+if [[ -d "env" ]]; then
+    . ./env/bin/activate
+fi
+python3.6 scripts/infra $@
