@@ -2,5 +2,5 @@
   "cuda": true,
   "wandb_name": "new-baseline",
   "checkpoint_epochs": 6,
-  "epochs": 26
+  "epochs": 30
 }
