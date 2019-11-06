@@ -7,7 +7,7 @@ from tabulate import tabulate
 
 import settings
 
-client = boto3.client("ec2")
+client = boto3.client("ec2", region_name=settings.AWS_REGION)
 
 DESCRIBE_KEYS = ["InstanceId", "InstanceType", "LaunchTime", "State"]
 
