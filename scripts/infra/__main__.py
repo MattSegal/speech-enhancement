@@ -94,6 +94,7 @@ def stop(job_id):
 def cleanup():
     """
     Cleanup dangling AWS bits.
+    TODO: Kill any GPU types older thank X hours.
     """
     aws.cleanup_volumes()
 

@@ -7,7 +7,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 import wandb
 
-from ..datasets.speech_dataset import SpeechDataset
+from ..datasets import NoisySpeechDataset
 from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
 from ..models.scene_net import SceneNet
@@ -54,8 +54,8 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
         )
 
     # Load datasets
-    training_set = SpeechDataset(train=True, subsample=subsample)
-    validation_set = SpeechDataset(train=False, subsample=subsample)
+    training_set = NoisySpeechDataset(train=True, subsample=subsample)
+    validation_set = NoisySpeechDataset(train=False, subsample=subsample)
 
     # Construct data loaders
     training_data_loader = DataLoader(
@@ -72,32 +72,22 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
     # Initialize optmizer
     optimizer = optim.AdamW(
-        net.parameters(),
-        lr=LEARNING_RATE,
-        betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY,
+        net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
 
     # Initialize feature loss function
-    loss_net = checkpoint.load(
-        LOSS_NET_CHECKPOINT, net=SceneNet(), use_cuda=use_cuda
-    )
+    loss_net = checkpoint.load(LOSS_NET_CHECKPOINT, net=SceneNet(), use_cuda=use_cuda)
     loss_net.eval()
     loss_net.set_feature_mode()
     feature_loss_criterion = AudioFeatureLoss(loss_net, use_cuda=use_cuda)
 
     # Initialize discriminator loss function, optimizer
-    disc_net = (
-        MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
-    )
+    disc_net = MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
 
     disc_net.train()
     gan_loss = LeastSquaresLoss(disc_net)
     optimizer_disc = optim.AdamW(
-        disc_net.parameters(),
-        lr=LEARNING_RATE,
-        betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY,
+        disc_net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
 
     # Keep track of loss history using moving average
@@ -121,9 +111,7 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
         if CHECKPOINT_NAME and is_checkpoint_epoch:
             checkpoint.save_state_dict(net, CHECKPOINT_NAME, name=wandb_name)
         if DISC_NET_CHECKPOINT_NAME and is_checkpoint_epoch:
-            checkpoint.save_state_dict(
-                disc_net, DISC_NET_CHECKPOINT_NAME, name=wandb_name
-            )
+            checkpoint.save_state_dict(disc_net, DISC_NET_CHECKPOINT_NAME, name=wandb_name)
 
         # Run training loop
         net.train()
@@ -158,11 +146,7 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
             # Add exclusion loss to loss
             exclusion_loss = get_exclusion_loss(inputs, outputs, targets)
 
-            loss = (
-                FEATURE_WEIGHT * feature_loss
-                + DISC_WEIGHT * gen_gan_loss
-                + exclusion_loss
-            )
+            loss = FEATURE_WEIGHT * feature_loss + DISC_WEIGHT * gen_gan_loss + exclusion_loss
 
             # Calculate model weight gradients from the loss and update model.
             loss.backward()
@@ -220,9 +204,7 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
     # Save final model checkpoint
     if CHECKPOINT_NAME:
-        checkpoint.save_state_dict(
-            net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb
-        )
+        checkpoint.save_state_dict(net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
 
     # Save final discriminator checkpoint
     if DISC_NET_CHECKPOINT_NAME:

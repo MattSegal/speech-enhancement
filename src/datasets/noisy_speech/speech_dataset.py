@@ -6,13 +6,13 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 from scipy.io import wavfile
 
+from src.utils import s3
 
-DATA_PATH = "data/"
-
+DATA_PATH = "data/noisy_speech"
 MAX_AUDIO_LENGTH = 2 ** 15  # ~1s of data at 16kHz
 
 """
-look into https://github.com/pytorch/audio
+TODO: look into https://github.com/pytorch/audio
 for
     data loading
     audio transforms
@@ -20,7 +20,7 @@ for
 """
 
 
-class SpeechDataset(Dataset):
+class NoisySpeechDataset(Dataset):
     """
     A dataset of clean and noisy speech, for use in the speech enhancement task.
     The input is a 1D tensor of floats, representing a complete noisy audio sample.
@@ -29,8 +29,14 @@ class SpeechDataset(Dataset):
 
     def __init__(self, train, subsample=None):
         dataset_label = "training" if train else "validation"
-        print(f"Loading {dataset_label} dataset into memory.")
 
+        if not os.path.exists(DATA_PATH):
+            print("Fetching data from S3")
+            os.makedirs(DATA_PATH, exist_ok=True)
+            s3.fetch_data("noisy_speech", DATA_PATH)
+            print("Done fetching data from S3")
+
+        print(f"Loading {dataset_label} dataset into memory.")
         print("Loading clean data...")
         self.clean_data = []
         self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
