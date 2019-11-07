@@ -1,6 +1,8 @@
 #!/bin/bash
 # Training script for AWS EC2 instances
 cd code
+git fetch
+git checkout $1
 git pull
 . ./env/bin/activate
 pip3 install -r requirements.txt
