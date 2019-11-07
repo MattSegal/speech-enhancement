@@ -1,6 +1,8 @@
+import os
 import subprocess
 
 SSH_ARGS = "-o StrictHostKeyChecking=no -i ~/.ssh/wizard.pem"
+BRANCH = os.environ.get("BUILDKITE_BRANCH", "master")
 
 
 def ssh_interactive(instance):
@@ -15,4 +17,4 @@ def ssh_run_job(instance):
     name = instance["name"]
     print(f"Starting SSH session with instance {name}.")
     subprocess.call(f"scp {SSH_ARGS} ./train-aws.sh ubuntu@{ip}:/home/ubuntu/train.sh", shell=True)
-    subprocess.call(f"ssh {SSH_ARGS} ubuntu@{ip} 'bash ~/train.sh'", shell=True)
+    subprocess.call(f"ssh {SSH_ARGS} ubuntu@{ip} 'bash ~/train.sh {BRANCH}'", shell=True)

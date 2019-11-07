@@ -23,28 +23,6 @@ def status():
 
 @click.command()
 @click.argument("name")
-def stop(name):
-    """Stop an EC2 instance"""
-    instance = aws.find_instance(name)
-    if instance:
-        aws.stop_instance(instance)
-    else:
-        click.echo(f"Instance {name} not found")
-
-
-@click.command()
-@click.argument("name")
-def start(name):
-    """Start an EC2 instance"""
-    instance = aws.find_instance(name)
-    if instance:
-        aws.start_instance(instance)
-    else:
-        click.echo(f"Instance {name} not found")
-
-
-@click.command()
-@click.argument("name")
 def ssh(name):
     """SSH into an EC2 instance"""
     instance = aws.find_instance(name)
