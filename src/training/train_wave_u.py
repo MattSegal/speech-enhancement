@@ -65,8 +65,6 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
     # Initialize model
     net = WaveUNet().cuda() if use_cuda else WaveUNet().cpu()
-    if use_wandb:
-        wandb.watch(net)
 
     # Initialize optmizer
     optimizer = optim.AdamW(
