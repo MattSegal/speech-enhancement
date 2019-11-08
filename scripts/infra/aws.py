@@ -17,18 +17,8 @@ class NoInstanceAvailable(Exception):
 
 
 def run_job(job_id: str):
-    instance_type = None
-    instances = describe_instances()
-    for i_type in settings.EC2_LAUNCH_PREFERENCE:
-        num_type = sum([i["InstanceType"] == i_type for i in instances])
-        if num_type < settings.EC2_INSTANCE_TYPE_LIMIT:
-            instance_type = i_type
-            break
-
-    if not instance_type:
-        raise NoInstanceAvailable("No instances available.")
-    else:
-        run_instance(job_id, instance_type)
+    instance_type = settings.EC2InstanceType.g4dn
+    run_instance(job_id, instance_type)
 
 
 def stop_job(job_id: str):
