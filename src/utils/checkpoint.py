@@ -29,6 +29,7 @@ def save(net, prefix, name=None, use_wandb=False):
     """
     Save full model checkpoint to disk
     """
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     checkpoint_filename = get_checkpoint_filename(prefix, name, suffix="full.ckpt")
     print(f"\nSaving checkpoint model as {checkpoint_filename}... ", end="")
     checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
@@ -47,6 +48,7 @@ def save_state_dict(net, prefix, name=None, use_wandb=False):
     """
     Save model state dict checkpoint to disk
     """
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     checkpoint_filename = get_checkpoint_filename(prefix, name, suffix="ckpt")
     print(f"\nSaving checkpoint state dict as {checkpoint_filename}... ", end="")
     checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
