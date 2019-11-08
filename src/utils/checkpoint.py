@@ -11,6 +11,9 @@ CHECKPOINT_DIR = "checkpoints"
 
 def load(checkpoint_filename, net=None, use_cuda=True):
     checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
+    if not os.path.exists(checkpoint_path):
+        s3.download_file(checkpoint_path, checkpoint_path)
+
     map_location = None if use_cuda else torch.device("cpu")
     if checkpoint_filename.endswith("full.ckpt"):
         net = torch.load(checkpoint_path, map_location=map_location)
