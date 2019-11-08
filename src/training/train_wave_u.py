@@ -30,6 +30,7 @@ DISC_NET_CHECKPOINT_NAME = "disc-net"
 # Training hyperparams
 BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
+DISC_LEARNING_RATE = LEARNING_RATE * 4
 ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
 DISC_WEIGHT = 1e-1
@@ -81,9 +82,7 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
     disc_net.train()
     gan_loss = LeastSquaresLoss(disc_net)
-    optimizer_disc = optim.AdamW(
-        disc_net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
-    )
+    optimizer_disc = optim.AdamW(disc_net.parameters(), lr=DISC_LEARNING_RATE, betas=ADAM_BETAS)
 
     # Keep track of loss history using moving average
     disc_loss = MovingAverage(decay=0.8)
