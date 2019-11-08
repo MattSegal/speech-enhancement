@@ -4,18 +4,6 @@ Try to replicate Speech Denoising with Deep Feature Losses ([arXiv](https://arxi
 
 Code and concepts borrowed from [Francois Germain's repo](https://github.com/francoisgermain/SpeechDenoisingWithDeepFeatureLosses)
 
-### Getting started
-
-This should get you 80% of the way there.
-
-```bash
-sudo apt-get install sox
-./scripts/setup-python.sh
-./scripts/setup-gpu.sh
-. env/bin/activate
-python3 run.py
-```
-
 ### Datasets
 
 The Univeristy of Edinburgh [Noisy speech database](https://datashare.is.ed.ac.uk/handle/10283/2791)
@@ -32,11 +20,3 @@ At the moment, this algorithm requires using 32-bit floating-point audio files t
 ```bash
 sox audiofile.wav -r 16000 -b 32 -e float audiofile.float.wav
 ```
-
-### Training
-
-Requires GCloud SDK
-https://cloud.google.com/sdk/docs/
-https://cloud.google.com/ml-engine/docs/custom-containers-training
-
-gs://matt-ml
