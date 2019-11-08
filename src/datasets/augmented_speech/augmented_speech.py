@@ -10,6 +10,6 @@ class AugmentedSpeechDataset(NoisySpeechDataset):
         Get item by integer index,
         """
         clean = self.clean_data[idx]
-        noisy = augment_audio(clean)
+        noisy = augment_audio(clean).astype("float32")
         return torch.tensor(noisy), torch.tensor(clean)
 
