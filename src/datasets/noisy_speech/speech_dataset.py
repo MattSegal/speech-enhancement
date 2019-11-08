@@ -27,17 +27,19 @@ class NoisySpeechDataset(Dataset):
     The target is a 1D tensor of floats, representing a corresponding clean audio sample. 
     """
 
-    def __init__(self, train, subsample=None):
+    def __init__(self, train, subsample=None, quiet=False):
+        self.quiet = quiet
         dataset_label = "training" if train else "validation"
-
         if not os.path.exists(DATA_PATH):
             print("Fetching data from S3")
             os.makedirs(DATA_PATH, exist_ok=True)
             s3.fetch_data("noisy_speech", DATA_PATH)
             print("Done fetching data from S3")
 
-        print(f"Loading {dataset_label} dataset into memory.")
-        print("Loading clean data...")
+        if not quiet:
+            print(f"Loading {dataset_label} dataset into memory.")
+            print("Loading clean data...")
+
         self.clean_data = []
         self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
         self.clean_files = os.listdir(self.clean_folder)
@@ -46,8 +48,9 @@ class NoisySpeechDataset(Dataset):
 
         assert all([f.endswith(".wav") for f in self.clean_files])
         self.load_data(self.clean_files, self.clean_folder, self.clean_data)
+        if not quiet:
+            print("Loading noisy data...")
 
-        print("Loading noisy data...")
         self.noisy_data = []
         self.noisy_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_noisy")
         self.noisy_files = os.listdir(self.noisy_folder)
@@ -55,14 +58,15 @@ class NoisySpeechDataset(Dataset):
         assert all([f.endswith(".wav") for f in self.noisy_files])
         assert len(self.noisy_files) == len(self.clean_files)
         self.load_data(self.noisy_files, self.noisy_folder, self.noisy_data)
-
-        print("Done loading dataset into memory.")
+        if not quiet:
+            print("Done loading dataset into memory.")
 
     def load_data(self, filenames, folder, data):
         """
         Load .wav files into memory.
         """
-        for filename in tqdm(filenames):
+        itr = list if self.quiet else tqdm
+        for filename in itr(filenames):
             path = os.path.join(folder, filename)
             sample_rate, wav_arr = wavfile.read(path)
             assert len(wav_arr.shape) == 1
