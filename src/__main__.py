@@ -1,11 +1,8 @@
-import os
 import json
 
 import click
 
 from .training.train_wave_u import train
-
-BUILDKITE_BRANCH = os.environ.get("BUILDKITE_BRANCH", "")
 
 
 @click.group()
@@ -31,12 +28,13 @@ def dev():
 
 
 @click.command()
-def prod():
+@click.option("--branch", default="")
+def prod(branch):
     print("Running training job using prod config.")
     with open("config.prod.json", "r") as f:
         config = json.load(f)
 
-    job_name = BUILDKITE_BRANCH.replace("train/", "")
+    job_name = branch.replace("train/", "")
     if job_name:
         old_name = config.get("wandb_name")
         print(f'Overriding W&B name "{old_name}" with "{job_name}"')
