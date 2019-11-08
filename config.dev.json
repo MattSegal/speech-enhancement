@@ -1,5 +1,5 @@
 {
-  "cuda": true,
+  "cuda": false,
   "epochs": 5,
   "checkpoint_epochs": null,
   "subsample": 8

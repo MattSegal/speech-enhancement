@@ -10,7 +10,6 @@ import wandb
 from ..datasets import NoisySpeechDataset
 from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
-from ..models.scene_net import SceneNet
 from ..utils.trackers import MovingAverage
 from ..utils.loss import (
     AudioFeatureLoss,
@@ -23,7 +22,7 @@ from ..utils import checkpoint
 from ..utils.log import log_training_info
 
 # Checkpointing
-LOSS_NET_CHECKPOINT = "saved/scene-net-long-train.ckpt"
+LOSS_NET_CHECKPOINT = "scene-net-long-train-1573179729.full.ckpt"
 CHECKPOINT_NAME = "wave-u-net"
 WANDB_PROJECT = "wave-u-net"
 DISC_NET_CHECKPOINT_NAME = "disc-net"
@@ -68,32 +67,22 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
     # Initialize optmizer
     optimizer = optim.AdamW(
-        net.parameters(),
-        lr=LEARNING_RATE,
-        betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY,
+        net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
 
     # Initialize feature loss function
-    loss_net = checkpoint.load(
-        LOSS_NET_CHECKPOINT, net=SceneNet(), use_cuda=use_cuda
-    )
+    loss_net = checkpoint.load(LOSS_NET_CHECKPOINT, use_cuda=use_cuda)
     loss_net.eval()
     loss_net.set_feature_mode()
     feature_loss_criterion = AudioFeatureLoss(loss_net, use_cuda=use_cuda)
 
     # Initialize discriminator loss function, optimizer
-    disc_net = (
-        MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
-    )
+    disc_net = MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
 
     disc_net.train()
     gan_loss = LeastSquaresLoss(disc_net)
     optimizer_disc = optim.AdamW(
-        disc_net.parameters(),
-        lr=LEARNING_RATE,
-        betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY,
+        disc_net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
 
     # Keep track of loss history using moving average
@@ -207,7 +196,5 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
     # Save final discriminator checkpoint
     if DISC_NET_CHECKPOINT_NAME:
-        checkpoint.save(
-            net, DISC_NET_CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb
-        )
+        checkpoint.save(net, DISC_NET_CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
 
