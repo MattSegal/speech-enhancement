@@ -32,7 +32,6 @@ BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
-DISC_WEIGHT = 1e-1
 
 
 def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
@@ -135,8 +134,8 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
             # Add discriminator to loss function
             fake_audio = outputs.view(batch_size, 1, -1)
             gen_gan_loss = gan_loss.for_generator(inputs, fake_audio)
-
-            loss = feature_loss + DISC_WEIGHT * gen_gan_loss
+            mse_loss = mean_squared_error(outputs, targets)
+            loss = mse_loss + 0.1 * feature_loss + 0.01 * gen_gan_loss
 
             # Calculate model weight gradients from the loss and update model.
             loss.backward()
@@ -145,7 +144,7 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
             # Track training information
             loss_amount = feature_loss.data.item()
             training_loss.update(loss_amount)
-            mse = mean_squared_error(outputs, targets).data.item()
+            mse = mse_loss.data.item()
             training_mse.update(mse)
             loss_amount = gen_gan_loss.data.item()
             gen_loss.update(loss_amount)
