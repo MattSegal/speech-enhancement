@@ -1,6 +1,6 @@
 {
   "cuda": true,
-  "wandb_name": "new-baseline",
+  "wandb_name": "no-name",
   "checkpoint_epochs": 6,
-  "epochs": 30
+  "epochs": 24
 }

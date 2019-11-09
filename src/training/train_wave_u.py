@@ -7,7 +7,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 import wandb
 
-from ..datasets import NoisySpeechDataset
+from ..datasets import AugmentedSpeechDataset
 from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
 from ..utils.trackers import MovingAverage
@@ -24,12 +24,13 @@ from ..utils.log import log_training_info
 # Checkpointing
 LOSS_NET_CHECKPOINT = "scene-net-long-train-1573179729.full.ckpt"
 CHECKPOINT_NAME = "wave-u-net"
-WANDB_PROJECT = "wave-u-net"
+WANDB_PROJECT = "phone-filter"
 DISC_NET_CHECKPOINT_NAME = "disc-net"
 
 # Training hyperparams
 BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
+DISC_LEARNING_RATE = 5 * 1e-4
 ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
 DISC_WEIGHT = 1e-1
@@ -51,8 +52,8 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
         )
 
     # Load datasets
-    training_set = NoisySpeechDataset(train=True, subsample=subsample)
-    validation_set = NoisySpeechDataset(train=False, subsample=subsample)
+    training_set = AugmentedSpeechDataset(train=True, subsample=subsample)
+    validation_set = AugmentedSpeechDataset(train=False, subsample=subsample)
 
     # Construct data loaders
     training_data_loader = DataLoader(
@@ -82,7 +83,7 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
     disc_net.train()
     gan_loss = LeastSquaresLoss(disc_net)
     optimizer_disc = optim.AdamW(
-        disc_net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
+        disc_net.parameters(), lr=DISC_LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
 
     # Keep track of loss history using moving average
@@ -103,8 +104,6 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
         is_checkpoint_epoch = checkpoint_epochs and epoch % checkpoint_epochs == 0
         if CHECKPOINT_NAME and is_checkpoint_epoch:
             checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name)
-        if DISC_NET_CHECKPOINT_NAME and is_checkpoint_epoch:
-            checkpoint.save(disc_net, DISC_NET_CHECKPOINT_NAME, name=wandb_name)
 
         # Run training loop
         net.train()
@@ -193,8 +192,4 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
     # Save final model checkpoint
     if CHECKPOINT_NAME:
         checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
-
-    # Save final discriminator checkpoint
-    if DISC_NET_CHECKPOINT_NAME:
-        checkpoint.save(net, DISC_NET_CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
 
