@@ -71,26 +71,7 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
         net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
 
-    # Initialize feature loss function
-    loss_net = checkpoint.load(LOSS_NET_CHECKPOINT, use_cuda=use_cuda)
-    loss_net.eval()
-    loss_net.set_feature_mode()
-    feature_loss_criterion = AudioFeatureLoss(loss_net, use_cuda=use_cuda)
-
-    # Initialize discriminator loss function, optimizer
-    disc_net = MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
-
-    disc_net.train()
-    gan_loss = LeastSquaresLoss(disc_net)
-    optimizer_disc = optim.AdamW(
-        disc_net.parameters(), lr=DISC_LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
-    )
-
     # Keep track of loss history using moving average
-    disc_loss = MovingAverage(decay=0.8)
-    gen_loss = MovingAverage(decay=0.8)
-    training_loss = MovingAverage(decay=0.8)
-    validation_loss = MovingAverage(decay=0.8)
     mean_squared_error = nn.MSELoss()
     training_mse = MovingAverage(decay=0.8)
     validation_mse = MovingAverage(decay=0.8)
@@ -129,36 +110,15 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
             # Run loss function on over the model's prediction
             assert targets.shape == (batch_size, audio_length)
-            feature_loss = feature_loss_criterion(inputs, outputs, targets)
-
-            # Add discriminator to loss function
-            fake_audio = outputs.view(batch_size, 1, -1)
-            gen_gan_loss = gan_loss.for_generator(inputs, fake_audio)
-
-            loss = feature_loss + DISC_WEIGHT * gen_gan_loss
+            loss = mean_squared_error(outputs, targets)
 
             # Calculate model weight gradients from the loss and update model.
             loss.backward()
             optimizer.step()
 
             # Track training information
-            loss_amount = feature_loss.data.item()
-            training_loss.update(loss_amount)
-            mse = mean_squared_error(outputs, targets).data.item()
+            mse = loss.data.item()
             training_mse.update(mse)
-            loss_amount = gen_gan_loss.data.item()
-            gen_loss.update(loss_amount)
-
-            # Train discriminator
-            optimizer_disc.zero_grad()
-            fake_audio = outputs.view(batch_size, 1, -1).detach()
-            disc_gan_loss = gan_loss.for_discriminator(inputs, fake_audio)
-            disc_gan_loss.backward()
-            optimizer_disc.step()
-
-            # Track disc training information
-            loss_amount = disc_gan_loss.data.item()
-            disc_loss.update(loss_amount)
 
         # Check performance (loss) on validation set.
         net.eval()
@@ -171,21 +131,11 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
                 targets = targets.cuda() if use_cuda else targets.cpu()
                 outputs = net(inputs)
                 outputs = outputs.squeeze(dim=1)
-                loss = feature_loss_criterion(inputs, outputs, targets)
-                loss_amount = loss.data.item()
-                validation_loss.update(loss_amount)
                 mse = mean_squared_error(outputs, targets).data.item()
                 validation_mse.update(mse)
 
         log_training_info(
-            {
-                "Training Feature Loss": training_loss.value,
-                "Validation Feature Loss": validation_loss.value,
-                "Training Loss": training_mse.value,
-                "Validation Loss": validation_mse.value,
-                "Discriminator Loss": disc_loss.value,
-                "Generator Loss": gen_loss.value,
-            },
+            {"Training Loss": training_mse.value, "Validation Loss": validation_mse.value},
             use_wandb=use_wandb,
         )
 
