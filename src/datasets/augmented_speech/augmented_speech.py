@@ -1,6 +1,6 @@
 import torch
 
-from src.utils.augment import augment_audio
+from src.utils import augment
 from src.datasets.noisy_speech.speech_dataset import NoisySpeechDataset
 
 
@@ -10,6 +10,5 @@ class AugmentedSpeechDataset(NoisySpeechDataset):
         Get item by integer index,
         """
         clean = self.clean_data[idx]
-        noisy = augment_audio(clean)
+        noisy = augment.mask_high_freq(clean, mask_freq=3500)
         return torch.tensor(noisy), torch.tensor(clean)
-
