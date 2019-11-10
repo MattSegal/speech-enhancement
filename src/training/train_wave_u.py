@@ -65,13 +65,13 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     # Initialize discriminator loss function, optimizer
     disc_net = MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
 
-    disc_net.train()
-    gan_loss = LeastSquaresLoss(disc_net)
-    optimizer_disc = optim.AdamW(disc_net.parameters(), lr=DISC_LEARNING_RATE, betas=ADAM_BETAS)
+    # disc_net.train()
+    # gan_loss = LeastSquaresLoss(disc_net)
+    # optimizer_disc = optim.AdamW(disc_net.parameters(), lr=DISC_LEARNING_RATE, betas=ADAM_BETAS)
 
     # Keep track of loss history using moving average
-    disc_loss = MovingAverage(decay=0.8)
-    gen_loss = MovingAverage(decay=0.8)
+    # disc_loss = MovingAverage(decay=0.8)
+    # gen_loss = MovingAverage(decay=0.8)
     training_loss = MovingAverage(decay=0.8)
     validation_loss = MovingAverage(decay=0.8)
     mean_squared_error = nn.MSELoss()
@@ -114,11 +114,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
             assert targets.shape == (batch_size, audio_length)
             l1_loss_t = l1_loss(outputs, targets)
 
-            # Add discriminator to loss function
-            fake_audio = outputs.view(batch_size, 1, -1)
-            gen_gan_loss = gan_loss.for_generator(inputs, fake_audio)
-
-            loss = l1_loss_t + DISC_WEIGHT * gen_gan_loss
+            loss = l1_loss_t  # + DISC_WEIGHT * gen_gan_loss
 
             # Calculate model weight gradients from the loss and update model.
             loss.backward()
@@ -129,19 +125,6 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
             training_loss.update(loss_amount)
             mse = mean_squared_error(outputs, targets).data.item()
             training_mse.update(mse)
-            loss_amount = gen_gan_loss.data.item()
-            gen_loss.update(loss_amount)
-
-            # Train discriminator
-            optimizer_disc.zero_grad()
-            fake_audio = outputs.view(batch_size, 1, -1).detach()
-            disc_gan_loss = gan_loss.for_discriminator(inputs, fake_audio)
-            disc_gan_loss.backward()
-            optimizer_disc.step()
-
-            # Track disc training information
-            loss_amount = disc_gan_loss.data.item()
-            disc_loss.update(loss_amount)
 
         # Check performance (loss) on validation set.
         net.eval()
@@ -166,8 +149,6 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
                 "Validation L1 Loss": validation_loss.value,
                 "Training Loss": training_mse.value,
                 "Validation Loss": validation_mse.value,
-                "Discriminator Loss": disc_loss.value,
-                "Generator Loss": gen_loss.value,
             },
             use_wandb=use_wandb,
         )
