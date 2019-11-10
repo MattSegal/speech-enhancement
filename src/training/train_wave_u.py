@@ -9,31 +9,20 @@ import wandb
 
 from ..datasets import AugmentedSpeechDataset
 from ..models.wave_u_net import WaveUNet
-from ..models.mel_discriminator import MelDiscriminatorNet
 from ..utils.trackers import MovingAverage
-from ..utils.loss import (
-    AudioFeatureLoss,
-    RelativisticLoss,
-    RelativisticAverageStandardGANLoss,
-    LeastSquaresLoss,
-    MultiScaleLoss,
-)
+from ..utils.loss import l1_loss
 from ..utils import checkpoint
 from ..utils.log import log_training_info
 
 # Checkpointing
-LOSS_NET_CHECKPOINT = "scene-net-long-train-1573179729.full.ckpt"
 CHECKPOINT_NAME = "wave-u-net"
 WANDB_PROJECT = "phone-filter"
-DISC_NET_CHECKPOINT_NAME = "disc-net"
 
 # Training hyperparams
-BATCH_SIZE = 8
+BATCH_SIZE = 16
 LEARNING_RATE = 1e-4
-DISC_LEARNING_RATE = 5 * 1e-4
 ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
-DISC_WEIGHT = 1e-1
 
 
 def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
@@ -72,9 +61,9 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
     )
 
     # Keep track of loss history using moving average
-    mean_squared_error = nn.MSELoss()
-    training_mse = MovingAverage(decay=0.8)
-    validation_mse = MovingAverage(decay=0.8)
+    criterion = l1_loss
+    training_loss = MovingAverage(decay=0.8)
+    validation_loss = MovingAverage(decay=0.8)
 
     # Run training for some number of epochs.
     for epoch in range(num_epochs):
@@ -110,15 +99,15 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
             # Run loss function on over the model's prediction
             assert targets.shape == (batch_size, audio_length)
-            loss = mean_squared_error(outputs, targets)
+            loss = criterion(outputs, targets)
 
             # Calculate model weight gradients from the loss and update model.
             loss.backward()
             optimizer.step()
 
             # Track training information
-            mse = loss.data.item()
-            training_mse.update(mse)
+            loss_val = loss.data.item()
+            training_loss.update(loss_val)
 
         # Check performance (loss) on validation set.
         net.eval()
@@ -131,11 +120,11 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
                 targets = targets.cuda() if use_cuda else targets.cpu()
                 outputs = net(inputs)
                 outputs = outputs.squeeze(dim=1)
-                mse = mean_squared_error(outputs, targets).data.item()
-                validation_mse.update(mse)
+                loss_val = criterion(outputs, targets).data.item()
+                validation_loss.update(loss_val)
 
         log_training_info(
-            {"Training Loss": training_mse.value, "Validation Loss": validation_mse.value},
+            {"Training L1 Loss": training_loss.value, "Validation L1 Loss": validation_loss.value},
             use_wandb=use_wandb,
         )
 
