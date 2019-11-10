@@ -11,31 +11,23 @@ from ..datasets import NoisySpeechDataset
 from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
 from ..utils.trackers import MovingAverage
-from ..utils.loss import (
-    AudioFeatureLoss,
-    RelativisticLoss,
-    RelativisticAverageStandardGANLoss,
-    LeastSquaresLoss,
-    MultiScaleLoss,
-)
+from ..utils.loss import l1_loss, LeastSquaresLoss
 from ..utils import checkpoint
 from ..utils.log import log_training_info
 
 # Checkpointing
-LOSS_NET_CHECKPOINT = "scene-net-long-train-1573179729.full.ckpt"
 CHECKPOINT_NAME = "wave-u-net"
 WANDB_PROJECT = "wave-u-net"
-DISC_NET_CHECKPOINT_NAME = "disc-net"
 
 # Training hyperparams
-BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
 DISC_WEIGHT = 1e-1
+DISC_LEARNING_RATE = 4 * LEARNING_RATE
 
 
-def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
+def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
     use_wandb = bool(wandb_name)
     if use_wandb:
         wandb.init(
@@ -43,10 +35,10 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
             project=WANDB_PROJECT,
             config={
                 "Epochs": num_epochs,
+                "Batch Size": batch_size,
                 "Learning Rate": LEARNING_RATE,
                 "Adam Betas": ADAM_BETAS,
                 "Weight Decay": WEIGHT_DECAY,
-                "Batch Size": BATCH_SIZE,
             },
         )
 
@@ -56,10 +48,10 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
     # Construct data loaders
     training_data_loader = DataLoader(
-        training_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
+        training_set, batch_size=batch_size, shuffle=True, num_workers=3
     )
     validation_data_loader = DataLoader(
-        validation_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=3
+        validation_set, batch_size=batch_size, shuffle=True, num_workers=3
     )
 
     # Initialize model
@@ -70,20 +62,12 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
         net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
 
-    # Initialize feature loss function
-    loss_net = checkpoint.load(LOSS_NET_CHECKPOINT, use_cuda=use_cuda)
-    loss_net.eval()
-    loss_net.set_feature_mode()
-    feature_loss_criterion = AudioFeatureLoss(loss_net, use_cuda=use_cuda)
-
     # Initialize discriminator loss function, optimizer
     disc_net = MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
 
     disc_net.train()
     gan_loss = LeastSquaresLoss(disc_net)
-    optimizer_disc = optim.AdamW(
-        disc_net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
-    )
+    optimizer_disc = optim.AdamW(disc_net.parameters(), lr=DISC_LEARNING_RATE, betas=ADAM_BETAS)
 
     # Keep track of loss history using moving average
     disc_loss = MovingAverage(decay=0.8)
@@ -103,8 +87,6 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
         is_checkpoint_epoch = checkpoint_epochs and epoch % checkpoint_epochs == 0
         if CHECKPOINT_NAME and is_checkpoint_epoch:
             checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name)
-        if DISC_NET_CHECKPOINT_NAME and is_checkpoint_epoch:
-            checkpoint.save(disc_net, DISC_NET_CHECKPOINT_NAME, name=wandb_name)
 
         # Run training loop
         net.train()
@@ -130,20 +112,20 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
             # Run loss function on over the model's prediction
             assert targets.shape == (batch_size, audio_length)
-            feature_loss = feature_loss_criterion(inputs, outputs, targets)
+            l1_loss_t = l1_loss(outputs, targets)
 
             # Add discriminator to loss function
             fake_audio = outputs.view(batch_size, 1, -1)
             gen_gan_loss = gan_loss.for_generator(inputs, fake_audio)
 
-            loss = feature_loss + DISC_WEIGHT * gen_gan_loss
+            loss = l1_loss_t + DISC_WEIGHT * gen_gan_loss
 
             # Calculate model weight gradients from the loss and update model.
             loss.backward()
             optimizer.step()
 
             # Track training information
-            loss_amount = feature_loss.data.item()
+            loss_amount = l1_loss_t.data.item()
             training_loss.update(loss_amount)
             mse = mean_squared_error(outputs, targets).data.item()
             training_mse.update(mse)
@@ -172,7 +154,7 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
                 targets = targets.cuda() if use_cuda else targets.cpu()
                 outputs = net(inputs)
                 outputs = outputs.squeeze(dim=1)
-                loss = feature_loss_criterion(inputs, outputs, targets)
+                loss = l1_loss(outputs, targets)
                 loss_amount = loss.data.item()
                 validation_loss.update(loss_amount)
                 mse = mean_squared_error(outputs, targets).data.item()
@@ -180,8 +162,8 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
 
         log_training_info(
             {
-                "Training Feature Loss": training_loss.value,
-                "Validation Feature Loss": validation_loss.value,
+                "Training L1 Loss": training_loss.value,
+                "Validation L1 Loss": validation_loss.value,
                 "Training Loss": training_mse.value,
                 "Validation Loss": validation_mse.value,
                 "Discriminator Loss": disc_loss.value,
@@ -193,8 +175,3 @@ def train(num_epochs, use_cuda, wandb_name, subsample, checkpoint_epochs):
     # Save final model checkpoint
     if CHECKPOINT_NAME:
         checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
-
-    # Save final discriminator checkpoint
-    if DISC_NET_CHECKPOINT_NAME:
-        checkpoint.save(net, DISC_NET_CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
-

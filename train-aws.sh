@@ -7,4 +7,4 @@ git pull
 . ./env/bin/activate
 pip3 install -r requirements.txt
 . ./scripts/wandb-login.sh
-python3.6 -W ignore -m src prod --branch $1
+python3.6 -W ignore -m src aws --branch $1
