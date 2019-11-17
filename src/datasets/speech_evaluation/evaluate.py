@@ -36,16 +36,21 @@ CHECKPOINTS = [
     {"name": "U-net with MSE loss", "file": "wave-u-net-mse-onlyy-1573200273.full.ckpt"},
 ]
 SAMPLES = [
-    {"name": "Road noise", "slug": "road", "count": 4},
-    {"name": "Cafe", "slug": "cafe", "count": 4},
-    {"name": "Hiss", "slug": "hiss", "count": 4},
-    {"name": "Machine", "slug": "machine", "count": 2},
-    {"name": "Noise", "slug": "noise", "count": 2},
-    {"name": "Outside", "slug": "outside", "count": 1},
-    {"name": "Whine", "slug": "whine", "count": 1},
-    {"name": "Music", "slug": "music", "count": 5},
-    {"name": "Babbling speech", "slug": "babbling", "count": 3},
-    {"name": "Clean", "slug": "clean", "count": 3},
+    # {"name": "Road noise", "slug": "road", "count": 4},
+    # {"name": "Cafe", "slug": "cafe", "count": 4},
+    # {"name": "Hiss", "slug": "hiss", "count": 4},
+    # {"name": "Machine", "slug": "machine", "count": 2},
+    # {"name": "Noise", "slug": "noise", "count": 2},
+    # {"name": "Outside", "slug": "outside", "count": 1},
+    # {"name": "Whine", "slug": "whine", "count": 1},
+    # {"name": "Music", "slug": "music", "count": 5},
+    # {"name": "Babbling speech", "slug": "babbling", "count": 3},
+    {"name": "High freq band removed", "slug": "high_band", "count": 4},
+    {"name": "Low freq band removed", "slug": "low_band", "count": 4},
+    {"name": "High and low freq bands removed", "slug": "both_band", "count": 4},
+    {"name": "Phone similator", "slug": "phone", "count": 4},
+    {"name": "Podcast samples", "slug": "podcast", "count": 4},
+    # {"name": "Clean", "slug": "clean", "count": 3},
 ]
 
 
@@ -77,16 +82,23 @@ def evaluate(checkpoints, samples):
             sample_rate, input_arr = wavfile.read(file_path)
             assert len(input_arr.shape) == 1
             assert sample_rate == 16000
-            input_arr = pad_chunk(input_arr)
+            input_arr = pad_chunk(input_arr).astype("float32")
             sample_id = f"{slug}-{sample_idx}-input"
             save_audio_array(snippet, snippets, sample_id, "Input", input_arr)
             for checkpoint in checkpoints:
                 checkpoint_name = checkpoint["name"]
-                print(f"\t\tChecking net {checkpoint_name}")
-                net = checkpoint["net"]
-                pred_arr = get_prediction(net, input_arr)
-                checkpoint_id = checkpoint["file"].split("."[0])
+                print(f"\t\tChecking net {checkpoint_name}... ", end="")
+                checkpoint_id = checkpoint["file"].split(".")[0]
                 sample_id = f"{slug}-{sample_idx}-{checkpoint_id}"
+                save_dir = os.path.join(RESULT_DIR, sample_id)
+                if os.path.exists(save_dir):
+                    print("already exists.")
+                    _, pred_arr = wavfile.read(os.path.join(save_dir, "speech.wav"))
+                else:
+                    net = checkpoint["net"]
+                    pred_arr = get_prediction(net, input_arr)
+                    print("processed.")
+
                 save_audio_array(snippet, snippets, sample_id, checkpoint_name, pred_arr)
 
     html = template.format(inner="\n".join(snippets))
