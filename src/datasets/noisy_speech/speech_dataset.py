@@ -7,20 +7,13 @@ from torch.utils.data import Dataset
 from scipy.io import wavfile
 
 from src.utils import s3
+from src.datasets.s3dataset import S3BackedDataset
 
-DATA_PATH = "data/noisy_speech"
+DATASET_NAME = "noisy_speech"
 MAX_AUDIO_LENGTH = 2 ** 15  # ~1s of data at 16kHz
 
-"""
-TODO: look into https://github.com/pytorch/audio
-for
-    data loading
-    audio transforms
-    resampling
-"""
 
-
-class NoisySpeechDataset(Dataset):
+class NoisySpeechDataset(S3BackedDataset):
     """
     A dataset of clean and noisy speech, for use in the speech enhancement task.
     The input is a 1D tensor of floats, representing a complete noisy audio sample.
@@ -29,49 +22,30 @@ class NoisySpeechDataset(Dataset):
 
     def __init__(self, train, subsample=None, quiet=False):
         self.quiet = quiet
+        super().__init__(dataset_name=DATASET_NAME, quiet=quiet)
         dataset_label = "training" if train else "validation"
-        if not os.path.exists(DATA_PATH):
-            print("Fetching data from S3")
-            os.makedirs(DATA_PATH, exist_ok=True)
-            s3.fetch_data("noisy_speech", DATA_PATH)
-            print("Done fetching data from S3")
-
         if not quiet:
             print(f"Loading {dataset_label} dataset into memory.")
             print("Loading clean data...")
 
         self.clean_data = []
-        self.clean_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_clean")
-        self.clean_files = os.listdir(self.clean_folder)
-        if subsample:
-            self.clean_files = self.clean_files[:subsample]
-
-        assert all([f.endswith(".wav") for f in self.clean_files])
-        self.load_data(self.clean_files, self.clean_folder, self.clean_data)
+        self.clean_folder = os.path.join(self.data_path, f"{dataset_label}_set_clean")
+        self.wav_filenames = self.find_wav_filenames(self.clean_folder, subsample=subsample)
+        self.load_and_trim_data(self.wav_filenames, self.clean_folder, self.clean_data)
         if not quiet:
             print("Loading noisy data...")
 
         self.noisy_data = []
-        self.noisy_folder = os.path.join(DATA_PATH, f"{dataset_label}_set_noisy")
-        self.noisy_files = os.listdir(self.noisy_folder)
-        self.noisy_files = [f for f in self.noisy_files if f in self.clean_files]
-        assert all([f.endswith(".wav") for f in self.noisy_files])
-        assert len(self.noisy_files) == len(self.clean_files)
-        self.load_data(self.noisy_files, self.noisy_folder, self.noisy_data)
+        self.noisy_folder = os.path.join(self.data_path, f"{dataset_label}_set_noisy")
+        self.load_and_trim_data(self.wav_filenames, self.noisy_folder, self.noisy_data)
         if not quiet:
             print("Done loading dataset into memory.")
 
-    def load_data(self, filenames, folder, data):
+    def load_and_trim_data(self, filenames, folder, data):
         """
-        Load .wav files into memory.
+        Load .wav files into memory, but trim too long ones..
         """
-        itr = list if self.quiet else tqdm
-        for filename in itr(filenames):
-            path = os.path.join(folder, filename)
-            sample_rate, wav_arr = wavfile.read(path)
-            assert len(wav_arr.shape) == 1
-            assert sample_rate == 16000
-            data.append(wav_arr)
+        self.load_data(filenames, folder, data)
 
         # Ensure all sound samples are the same length
         for idx, wav_arr in enumerate(data):
