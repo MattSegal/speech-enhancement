@@ -21,6 +21,7 @@ DATA_DIR = "data/speech_evaluation"
 TEMPLATE_PATH = "src/datasets/speech_evaluation/template.html"
 SNIPPET_PATH = "src/datasets/speech_evaluation/snippet.html"
 CHECKPOINTS = [
+    {"name": "Untrained", "file": "wave-u-net-half-data-mse-1574067122.full.ckpt"},
     {
         "name": "U-net with GAN, MSE, feature loss",
         "file": "wave-u-net-mse-gan-feature-losses-1573224098.full.ckpt",
@@ -36,21 +37,21 @@ CHECKPOINTS = [
     {"name": "U-net with MSE loss", "file": "wave-u-net-mse-onlyy-1573200273.full.ckpt"},
 ]
 SAMPLES = [
-    # {"name": "Road noise", "slug": "road", "count": 4},
-    # {"name": "Cafe", "slug": "cafe", "count": 4},
-    # {"name": "Hiss", "slug": "hiss", "count": 4},
-    # {"name": "Machine", "slug": "machine", "count": 2},
-    # {"name": "Noise", "slug": "noise", "count": 2},
-    # {"name": "Outside", "slug": "outside", "count": 1},
-    # {"name": "Whine", "slug": "whine", "count": 1},
-    # {"name": "Music", "slug": "music", "count": 5},
-    # {"name": "Babbling speech", "slug": "babbling", "count": 3},
+    {"name": "Road noise", "slug": "road", "count": 4},
+    {"name": "Cafe", "slug": "cafe", "count": 4},
+    {"name": "Hiss", "slug": "hiss", "count": 4},
+    {"name": "Machine", "slug": "machine", "count": 2},
+    {"name": "Noise", "slug": "noise", "count": 2},
+    {"name": "Outside", "slug": "outside", "count": 1},
+    {"name": "Whine", "slug": "whine", "count": 1},
+    {"name": "Music", "slug": "music", "count": 5},
+    {"name": "Babbling speech", "slug": "babbling", "count": 3},
     {"name": "High freq band removed", "slug": "high_band", "count": 4},
     {"name": "Low freq band removed", "slug": "low_band", "count": 4},
     {"name": "High and low freq bands removed", "slug": "both_band", "count": 4},
     {"name": "Phone similator", "slug": "phone", "count": 4},
     {"name": "Podcast samples", "slug": "podcast", "count": 4},
-    # {"name": "Clean", "slug": "clean", "count": 3},
+    {"name": "Clean", "slug": "clean", "count": 3},
 ]
 
 
