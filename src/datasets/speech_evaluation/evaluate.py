@@ -22,6 +22,7 @@ TEMPLATE_PATH = "src/datasets/speech_evaluation/template.html"
 SNIPPET_PATH = "src/datasets/speech_evaluation/snippet.html"
 CHECKPOINTS = [
     {"name": "Untrained", "file": "wave-u-net-half-data-mse-1574067122.full.ckpt"},
+    {"name": "Half-trained", "file": "wave-u-net-half-data-mse-1574074898.full.ckpt"},
     {
         "name": "U-net with GAN, MSE, feature loss",
         "file": "wave-u-net-mse-gan-feature-losses-1573224098.full.ckpt",
