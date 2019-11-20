@@ -13,7 +13,7 @@
         "owners": ["099720109477"],
         "most_recent": true
       },
-      "instance_type": "g3s.xlarge",
+      "instance_type": "g4dn.xlarge",
       "ssh_username": "ubuntu",
       "ami_name": "deep-learning-{{timestamp}}",
       "iam_instance_profile": "deeplearning",

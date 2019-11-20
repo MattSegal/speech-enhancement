@@ -7,7 +7,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 import wandb
 
-from ..datasets import NoisySpeechDataset
+from ..datasets import NoisyLibreSpeechDataset as Dataset
 from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
 from ..utils.trackers import MovingAverage
@@ -43,8 +43,8 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
         )
 
     # Load datasets
-    training_set = NoisySpeechDataset(train=True, subsample=subsample)
-    validation_set = NoisySpeechDataset(train=False, subsample=subsample)
+    training_set = Dataset(train=True, subsample=subsample)
+    validation_set = Dataset(train=False, subsample=subsample)
 
     # Construct data loaders
     training_data_loader = DataLoader(

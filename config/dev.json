@@ -1,7 +1,0 @@
-{
-  "cuda": false,
-  "epochs": 5,
-  "checkpoint_epochs": null,
-  "subsample": 2,
-  "batch_size": 2
-}

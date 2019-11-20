@@ -16,5 +16,6 @@ jupyter
 matplotlib 
 
 # Utiltiies
+pyyaml
 awscli
 requests

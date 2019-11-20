@@ -1,2 +1,0 @@
-http://www.openslr.org/12/
-data/librispeech

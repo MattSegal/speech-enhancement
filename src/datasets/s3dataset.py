@@ -29,19 +29,25 @@ class S3BackedDataset(Dataset):
         s3.upload_data(self.data_path, self.dataset_name)
 
     def find_wav_filenames(self, folder, subsample=None):
+        return self._find_ext_filenames(".flac", folder, subsample=subsample)
+
+    def find_flac_filenames(self, folder, subsample=None):
+        return self._find_ext_filenames(".flac", folder, subsample=subsample)
+
+    def _find_ext_filenames(self, ext, folder, subsample=None):
         filenames = os.listdir(folder)
-        wav_filenames = [f for f in filenames if f.endswith(".wav")]
+        ext_filenames = [f for f in filenames if f.endswith(ext)]
         if subsample:
-            wav_filenames = wav_filenames[:subsample]
+            ext_filenames = ext_filenames[:subsample]
 
-        return wav_filenames
+        return ext_filenames
 
-    def load_data(self, wav_filenames, folder, data):
+    def load_data(self, filenames, folder, data):
         """
         Load .wav files into data array.
         """
         itr = list if self.quiet else tqdm
-        for filename in itr(wav_filenames):
+        for filename in itr(filenames):
             path = os.path.join(folder, filename)
             sample_rate, wav_arr = wavfile.read(path)
             assert len(wav_arr.shape) == 1

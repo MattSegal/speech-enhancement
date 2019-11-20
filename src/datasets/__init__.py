@@ -4,3 +4,4 @@ from .silence.silence_dataset import SilenceDataset
 from .tut_acoustic_scenes.scene_dataset import SceneDataset
 from .augmented_speech.augmented_speech import AugmentedSpeechDataset
 from .speech_evaluation.dataset import SpeechEvaluationDataset
+from .noisy_librispeech.librispeech_dataset import NoisyLibreSpeechDataset

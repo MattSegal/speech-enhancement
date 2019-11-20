@@ -1,6 +1,0 @@
-{
-  "cuda": true,
-  "checkpoint_epochs": 6,
-  "epochs": 20,
-  "batch_size": 16
-}

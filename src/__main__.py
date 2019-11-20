@@ -1,4 +1,4 @@
-import json
+import yaml
 
 import click
 
@@ -16,8 +16,8 @@ def cli():
 @click.command()
 def dev():
     print("Running training job using dev config.")
-    with open("config/dev.json", "r") as f:
-        config = json.load(f)
+    with open("config/dev.yaml", "r") as f:
+        config = yaml.load(f)
 
     run_training(config)
 
@@ -26,8 +26,8 @@ def dev():
 @click.option("--branch", default="")
 def prod(branch):
     print("Running training job using prod config.")
-    with open("config/prod.json", "r") as f:
-        config = json.load(f)
+    with open("config/prod.yaml", "r") as f:
+        config = yaml.load(f)
 
     run_training(config, branch)
 
@@ -36,8 +36,8 @@ def prod(branch):
 @click.option("--branch", default="")
 def aws(branch):
     print("Running training job using AWS config.")
-    with open("config/aws.json", "r") as f:
-        config = json.load(f)
+    with open("config/aws.yaml", "r") as f:
+        config = yaml.load(f)
 
     run_training(config, branch)
 
