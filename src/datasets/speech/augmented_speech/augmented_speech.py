@@ -1,7 +1,7 @@
 import torch
 
 from src.utils import augment
-from src.datasets.noisy_speech.speech_dataset import NoisySpeechDataset
+from src.datasets.speech.noisy_speech.speech_dataset import NoisySpeechDataset
 
 
 class AugmentedSpeechDataset(NoisySpeechDataset):

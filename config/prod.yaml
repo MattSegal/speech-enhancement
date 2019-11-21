@@ -1,3 +1,4 @@
+task: waveunet_train_mse
 cuda: true
 checkpoint_epochs: 6
 epochs: 20

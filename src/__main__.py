@@ -2,7 +2,7 @@ import yaml
 
 import click
 
-from .training.train_wave_u import train
+from src import tasks
 
 
 @click.group()
@@ -49,6 +49,7 @@ def run_training(config, branch=""):
         print(f'Overriding W&B name "{old_name}" with "{job_name}"')
         config["wandb_name"] = job_name
 
+    train = getattr(tasks, config["task"])
     train(
         num_epochs=config["epochs"],
         use_cuda=config["cuda"],
