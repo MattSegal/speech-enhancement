@@ -36,6 +36,15 @@ def ssh(name):
 
 @click.command()
 @click.argument("job_id")
+def boot(job_id):
+    """
+    Start a job but don't stop it
+    """
+    aws.run_job(job_id)
+
+
+@click.command()
+@click.argument("job_id")
 def start(job_id):
     """
     Start a job
@@ -82,4 +91,6 @@ cli.add_command(status)
 cli.add_command(ssh)
 cli.add_command(start)
 cli.add_command(stop)
+cli.add_command(boot)
+
 cli()
