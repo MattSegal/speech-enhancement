@@ -8,5 +8,5 @@ checkpoint_epochs: null
 # Desktop
 cuda: true
 epochs: 5
-subsample: 6000
+subsample: 12000
 batch_size: 16
