@@ -1,6 +1,13 @@
 task: waveunet_train_mse
-cuda: false
-epochs: 5
 checkpoint_epochs: null
-subsample: 4
-batch_size: 2
+# Laptop
+# cuda: false
+# epochs: 5
+# subsample: 4
+# batch_size: 2
+# Desktop
+cuda: true
+epochs: 5
+subsample: 3000
+batch_size: 8
+# 4.25

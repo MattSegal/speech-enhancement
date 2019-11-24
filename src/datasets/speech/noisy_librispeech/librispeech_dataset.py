@@ -20,17 +20,17 @@ class NoisyLibreSpeechDataset(S3BackedDataset):
     The target is a 1D tensor of floats, representing a corresponding clean audio sample. 
     """
 
-    def __init__(self, train, subsample=None, quiet=False):
+    def __init__(self, noise_data, train, subsample=None, quiet=False):
         self.quiet = quiet
+        self.noise_data = noise_data
         super().__init__(dataset_name=DATASET_NAME, quiet=quiet)
         dataset_label = "train" if train else "test"
         itr = list if self.quiet else tqdm
         self.clean_data = []
-        self.noise_data = []
         self.clean_folder = os.path.join(self.data_path, f"{dataset_label}_set")
-        self.noise_folder = os.path.join(self.data_path, f"noise")
-        self.clean_filenames = self.find_flac_filenames(self.clean_folder, subsample=subsample)
-        self.noise_filenames = self.find_flac_filenames(self.noise_folder, subsample=subsample)
+        self.clean_filenames = self.find_flac_filenames(
+            self.clean_folder, subsample=subsample
+        )
         if not quiet:
             print(f"Loading {dataset_label} dataset into memory.")
             print("Loading clean data...")
@@ -47,20 +47,6 @@ class NoisyLibreSpeechDataset(S3BackedDataset):
             self.clean_data.append(tensor)
 
         if not quiet:
-            print("Loading noisy data...")
-
-        for filename in itr(self.noise_filenames):
-            path = os.path.join(self.noise_folder, filename)
-            tensor, sample_rate = torchaudio.load(path)
-            if tensor.nelement() < AUDIO_LENGTH:
-                continue
-
-            assert sample_rate == 16000
-            assert tensor.dtype == torch.float32
-            tensor = tensor[0, :].reshape(-1)
-            self.noise_data.append(tensor)
-
-        if not quiet:
             print("Done loading dataset into memory.")
 
     def __len__(self):
@@ -74,7 +60,8 @@ class NoisyLibreSpeechDataset(S3BackedDataset):
         Get item by integer index,
         """
         clean = self.clean_data[idx]
-        noise = random.choice(self.noise_data)
+        noise_idx = random.randint(0, len(noise_data) - 1)
+        noise = self.noise_data[noise_idx]
         clean_chunk = subsample_chunk_random(clean, AUDIO_LENGTH)
         noise_chunk = subsample_chunk_random(noise, AUDIO_LENGTH)
         noise_chunk = noise_chunk * random.randint(1, 10)

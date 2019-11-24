@@ -7,7 +7,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 import wandb
 
-from src.datasets import NoisyLibreSpeechDataset as Dataset
+from src.datasets import NoisyLibreSpeechDataset as Dataset, NoisyScenesDataset
 from src.utils import checkpoint
 from src.utils.trackers import MovingAverage
 from src.utils.log import log_training_info
@@ -24,7 +24,9 @@ ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
 
 
-def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
+def train(
+    num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs
+):
     use_wandb = bool(wandb_name)
     if use_wandb:
         wandb.init(
@@ -40,8 +42,9 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
         )
 
     # Load datasets
-    training_set = Dataset(train=True, subsample=subsample)
-    validation_set = Dataset(train=False, subsample=subsample)
+    noise_set = NoisyScenesDataset()
+    training_set = Dataset(noise_data=noise_set, train=True, subsample=subsample)
+    validation_set = Dataset(noise_data=noise_set, train=False, subsample=subsample)
 
     # Construct data loaders
     training_data_loader = DataLoader(
@@ -56,7 +59,10 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
 
     # Initialize optmizer
     optimizer = optim.AdamW(
-        net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
+        net.parameters(),
+        lr=LEARNING_RATE,
+        betas=ADAM_BETAS,
+        weight_decay=WEIGHT_DECAY,
     )
 
     # Keep track of loss history using moving average
@@ -118,10 +124,13 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
                 validation_mse.update(mse)
 
         log_training_info(
-            {"Training Loss": training_mse.value, "Validation Loss": validation_mse.value},
+            {
+                "Training Loss": training_mse.value,
+                "Validation Loss": validation_mse.value,
+            },
             use_wandb=use_wandb,
         )
 
-    # Save final model checkpoint
+    Save final model checkpoint
     if CHECKPOINT_NAME:
         checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
