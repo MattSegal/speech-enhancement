@@ -1,0 +1,6 @@
+task: waveunet_train_mse
+checkpoint_epochs: null
+cuda: false
+epochs: 5
+subsample: 4
+batch_size: 2

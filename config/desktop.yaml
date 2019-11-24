@@ -1,5 +1,6 @@
 task: waveunet_train_mse
+checkpoint_epochs: null
 cuda: true
-checkpoint_epochs: 6
-epochs: 20
+epochs: 5
+subsample: 12000
 batch_size: 16

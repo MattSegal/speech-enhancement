@@ -1,48 +1,24 @@
+import os
 import yaml
 
 import click
 
 from src import tasks
 
+ENV_CHOICES = [f.split(".")[0] for f in os.listdir("config")]
 
-@click.group()
-def cli():
+
+@click.command()
+@click.option("--env", type=click.Choice(ENV_CHOICES, case_sensitive=False))
+@click.option("--branch", default="")
+def train_cli(env, branch):
     """
     Run model training
     """
-    pass
-
-
-@click.command()
-def dev():
-    print("Running training job using dev config.")
-    with open("config/dev.yaml", "r") as f:
+    print(f"Running training job using {env} config.")
+    with open(f"config/{env}.yaml", "r") as f:
         config = yaml.load(f)
 
-    run_training(config)
-
-
-@click.command()
-@click.option("--branch", default="")
-def prod(branch):
-    print("Running training job using prod config.")
-    with open("config/prod.yaml", "r") as f:
-        config = yaml.load(f)
-
-    run_training(config, branch)
-
-
-@click.command()
-@click.option("--branch", default="")
-def aws(branch):
-    print("Running training job using AWS config.")
-    with open("config/aws.yaml", "r") as f:
-        config = yaml.load(f)
-
-    run_training(config, branch)
-
-
-def run_training(config, branch=""):
     job_name = branch.replace("train/", "")
     if job_name:
         old_name = config.get("wandb_name")
@@ -60,7 +36,4 @@ def run_training(config, branch=""):
     )
 
 
-cli.add_command(aws)
-cli.add_command(prod)
-cli.add_command(dev)
-cli()
+train_cli()
