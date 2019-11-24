@@ -60,7 +60,7 @@ class NoisyLibreSpeechDataset(S3BackedDataset):
         Get item by integer index,
         """
         clean = self.clean_data[idx]
-        noise_idx = random.randint(0, len(noise_data) - 1)
+        noise_idx = random.randint(0, len(self.noise_data) - 1)
         noise = self.noise_data[noise_idx]
         clean_chunk = subsample_chunk_random(clean, AUDIO_LENGTH)
         noise_chunk = subsample_chunk_random(noise, AUDIO_LENGTH)
