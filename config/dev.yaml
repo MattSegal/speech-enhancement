@@ -9,4 +9,4 @@ checkpoint_epochs: null
 cuda: true
 epochs: 5
 subsample: 6000
-batch_size: 8
+batch_size: 16
