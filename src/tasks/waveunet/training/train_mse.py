@@ -131,6 +131,6 @@ def train(
             use_wandb=use_wandb,
         )
 
-    Save final model checkpoint
+    # Save final model checkpoint
     if CHECKPOINT_NAME:
         checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
