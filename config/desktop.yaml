@@ -1,4 +1,4 @@
-task: waveunet_train_mse
+task: waveunet_train_gan
 checkpoint_epochs: null
 cuda: true
 epochs: 5

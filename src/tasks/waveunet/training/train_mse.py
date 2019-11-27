@@ -24,9 +24,7 @@ ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
 
 
-def train(
-    num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs
-):
+def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
     use_wandb = bool(wandb_name)
     if use_wandb:
         wandb.init(
@@ -42,7 +40,7 @@ def train(
         )
 
     # Load datasets
-    noise_set = NoisyScenesDataset()
+    noise_set = NoisyScenesDataset(subsample=subsample)
     training_set = Dataset(noise_data=noise_set, train=True, subsample=subsample)
     validation_set = Dataset(noise_data=noise_set, train=False, subsample=subsample)
 
@@ -59,10 +57,7 @@ def train(
 
     # Initialize optmizer
     optimizer = optim.AdamW(
-        net.parameters(),
-        lr=LEARNING_RATE,
-        betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY,
+        net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
 
     # Keep track of loss history using moving average
@@ -124,10 +119,7 @@ def train(
                 validation_mse.update(mse)
 
         log_training_info(
-            {
-                "Training Loss": training_mse.value,
-                "Validation Loss": validation_mse.value,
-            },
+            {"Training Loss": training_mse.value, "Validation Loss": validation_mse.value},
             use_wandb=use_wandb,
         )
 

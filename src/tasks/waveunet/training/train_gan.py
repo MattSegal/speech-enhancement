@@ -9,9 +9,9 @@ import wandb
 
 from src.utils import checkpoint
 from src.utils.trackers import MovingAverage
-from src.utils.loss import l1_loss, LeastSquaresLoss
+from src.utils.loss import LeastSquaresLoss
 from src.utils.log import log_training_info
-from src.datasets import NoisyLibreSpeechDataset as Dataset
+from src.datasets import NoisyLibreSpeechDataset as Dataset, NoisyScenesDataset
 
 from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
@@ -44,8 +44,9 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
         )
 
     # Load datasets
-    training_set = Dataset(train=True, subsample=subsample)
-    validation_set = Dataset(train=False, subsample=subsample)
+    noise_set = NoisyScenesDataset(subsample=subsample)
+    training_set = Dataset(noise_data=noise_set, train=True, subsample=subsample)
+    validation_set = Dataset(noise_data=noise_set, train=False, subsample=subsample)
 
     # Construct data loaders
     training_data_loader = DataLoader(
@@ -113,20 +114,20 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
 
             # Run loss function on over the model's prediction
             assert targets.shape == (batch_size, audio_length)
-            l1_loss_t = l1_loss(outputs, targets)
+            mse_loss_t = mean_squared_error(outputs, targets)
 
             # Add discriminator to loss function
             fake_audio = outputs.view(batch_size, 1, -1)
             gen_gan_loss = gan_loss.for_generator(inputs, fake_audio)
 
-            loss = l1_loss_t + DISC_WEIGHT * gen_gan_loss
+            loss = mse_loss_t + DISC_WEIGHT * gen_gan_loss
 
             # Calculate model weight gradients from the loss and update model.
             loss.backward()
             optimizer.step()
 
             # Track training information
-            loss_amount = l1_loss_t.data.item()
+            loss_amount = mse_loss_t.data.item()
             training_loss.update(loss_amount)
             mse = mean_squared_error(outputs, targets).data.item()
             training_mse.update(mse)
@@ -155,7 +156,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
                 targets = targets.cuda() if use_cuda else targets.cpu()
                 outputs = net(inputs)
                 outputs = outputs.squeeze(dim=1)
-                loss = l1_loss(outputs, targets)
+                loss = mean_squared_error(outputs, targets)
                 loss_amount = loss.data.item()
                 validation_loss.update(loss_amount)
                 mse = mean_squared_error(outputs, targets).data.item()
@@ -163,8 +164,6 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
 
         log_training_info(
             {
-                "Training L1 Loss": training_loss.value,
-                "Validation L1 Loss": validation_loss.value,
                 "Training Loss": training_mse.value,
                 "Validation Loss": validation_mse.value,
                 "Discriminator Loss": disc_loss.value,
