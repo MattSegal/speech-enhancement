@@ -9,8 +9,10 @@ from torch.utils.data import Dataset
 from src.utils import s3
 from src.datasets.s3dataset import S3BackedDataset
 
-DATASET_NAME = "noisy_librispeech"
-AUDIO_LENGTH = 2 ** 16  # ~4s of data at 16kHz
+from . import settings
+
+DATASET_NAME = settings.DATASET_NAME
+AUDIO_LENGTH = settings.AUDIO_LENGTH
 
 
 class NoisyLibreSpeechDataset(S3BackedDataset):
@@ -28,9 +30,7 @@ class NoisyLibreSpeechDataset(S3BackedDataset):
         itr = list if self.quiet else tqdm
         self.clean_data = []
         self.clean_folder = os.path.join(self.data_path, f"{dataset_label}_set")
-        self.clean_filenames = self.find_flac_filenames(
-            self.clean_folder, subsample=subsample
-        )
+        self.clean_filenames = self.find_flac_filenames(self.clean_folder, subsample=subsample)
         if not quiet:
             print(f"Loading {dataset_label} dataset into memory.")
             print("Loading clean data...")
