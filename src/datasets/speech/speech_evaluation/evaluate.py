@@ -18,24 +18,28 @@ from .dataset import SpeechEvaluationDataset
 AUDIO_LENGTH = 2 ** 16  # ~1s of data at 16kHz
 RESULT_DIR = "data/evaluation_results"
 DATA_DIR = "data/speech_evaluation"
-TEMPLATE_PATH = "src/datasets/speech_evaluation/template.html"
-SNIPPET_PATH = "src/datasets/speech_evaluation/snippet.html"
+TEMPLATE_PATH = "src/datasets/speech/speech_evaluation/template.html"
+SNIPPET_PATH = "src/datasets/speech/speech_evaluation/snippet.html"
 CHECKPOINTS = [
-    {"name": "Untrained", "file": "wave-u-net-half-data-mse-1574067122.full.ckpt"},
-    {"name": "Half-trained", "file": "wave-u-net-half-data-mse-1574074898.full.ckpt"},
+    # {"name": "Untrained", "file": "wave-u-net-half-data-mse-1574067122.full.ckpt"},
+    # {"name": "Half-trained", "file": "wave-u-net-half-data-mse-1574074898.full.ckpt"},
     {
-        "name": "U-net with GAN, MSE, feature loss",
-        "file": "wave-u-net-mse-gan-feature-losses-1573224098.full.ckpt",
+        "name": "More data U net MSE",
+        "file": "wave-u-net-mse-noisy-libre-ablation-fixed-1574928689.full.ckpt",
     },
-    {
-        "name": "U-net with GAN and feature loss",
-        "file": "wave-u-net-new-baseline-1573206080.full.ckpt",
-    },
-    {
-        "name": "U-net with feature loss",
-        "file": "wave-u-net-feature-loss-only-1573203595.full.ckpt",
-    },
-    {"name": "U-net with MSE loss", "file": "wave-u-net-mse-onlyy-1573200273.full.ckpt"},
+    # {
+    #     "name": "U-net with GAN, MSE, feature loss",
+    #     "file": "wave-u-net-mse-gan-feature-losses-1573224098.full.ckpt",
+    # },
+    # {
+    #     "name": "U-net with GAN and feature loss",
+    #     "file": "wave-u-net-new-baseline-1573206080.full.ckpt",
+    # },
+    # {
+    #     "name": "U-net with feature loss",
+    #     "file": "wave-u-net-feature-loss-only-1573203595.full.ckpt",
+    # },
+    # {"name": "U-net with MSE loss", "file": "wave-u-net-mse-onlyy-1573200273.full.ckpt"},
 ]
 SAMPLES = [
     {"name": "Road noise", "slug": "road", "count": 4},
