@@ -20,8 +20,8 @@ WANDB_PROJECT = "wave-u-net"
 
 # Training hyperparams
 LEARNING_RATE = 1e-4
-ADAM_BETAS = (0.5, 0.9)
-WEIGHT_DECAY = 1e-4
+ADAM_BETAS = (0.9, 0.99)
+WEIGHT_DECAY = 1e-6
 
 
 def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
