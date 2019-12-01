@@ -119,7 +119,10 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
                 validation_mse.update(mse)
 
         log_training_info(
-            {"Training Loss": training_mse.value, "Validation Loss": validation_mse.value},
+            {
+                "Training Loss": training_mse.value,
+                "Validation Loss": validation_mse.value,
+            },
             use_wandb=use_wandb,
         )
 

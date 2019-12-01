@@ -30,15 +30,11 @@ from src.utils.trainer import Trainer
 mse = nn.MSELoss()
 
 
-def train(
-    num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs
-):
+def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
     trainer = Trainer(num_epochs, wandb_name)
     trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
     trainer.setup_wandb(WANDB_PROJECT, wandb_name)
-    train_loader, test_loader = trainer.load_data_loaders(
-        Dataset, batch_size, subsample
-    )
+    train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
     trainer.register_loss_fn(get_mse_loss)
     trainer.register_metric_fn(get_mse_metric, "Loss")
     trainer.input_shape = [2 ** 15]

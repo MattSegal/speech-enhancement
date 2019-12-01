@@ -74,9 +74,7 @@ class SceneDataset(Dataset):
         self.data = []
         self.data_labels = []
         wav_files = [
-            filename
-            for filename in os.listdir(data_folder)
-            if filename.endswith(".wav")
+            filename for filename in os.listdir(data_folder) if filename.endswith(".wav")
         ]
 
         for filename in tqdm(wav_files):

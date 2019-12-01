@@ -30,11 +30,7 @@ class Trainer:
         self.output_shape = []
 
     def load_net(self, net_class, **kwargs):
-        return (
-            net_class(**kwargs).cuda()
-            if self.use_cuda
-            else net_class(**kwargs).cpu()
-        )
+        return net_class(**kwargs).cuda() if self.use_cuda else net_class(**kwargs).cpu()
 
     def setup_wandb(self, wandb_project, wandb_name):
         self.wandb_name = wandb_name
@@ -156,8 +152,5 @@ class Trainer:
         # Save final model checkpoint
         if self.checkpoint_name:
             checkpoint.save(
-                net,
-                self.checkpoint_name,
-                name=self.wandb_name,
-                use_wandb=self.use_wandb,
+                net, self.checkpoint_name, name=self.wandb_name, use_wandb=self.use_wandb,
             )

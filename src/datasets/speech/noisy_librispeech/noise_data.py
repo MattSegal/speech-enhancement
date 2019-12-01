@@ -26,7 +26,9 @@ class NoisyScenesDataset(S3BackedDataset):
         itr = list if self.quiet else tqdm
         self.noise_data = []
         self.noise_folder = os.path.join(self.data_path, "noise")
-        self.noise_filenames = self.find_flac_filenames(self.noise_folder, subsample=subsample)
+        self.noise_filenames = self.find_flac_filenames(
+            self.noise_folder, subsample=subsample
+        )
         if not quiet:
             print("Loading noisy data...")
 

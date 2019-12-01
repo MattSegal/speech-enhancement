@@ -13,7 +13,9 @@ def audio_to_spec(audio_arr):
     channel 0 is frequency magnitude
     channel 1 is phase
     """
-    _, _, spectral_frames = signal.stft(audio_arr, fs=SAMPLING_RATE, nperseg=SAMPLES_PER_SEGMENT)
+    _, _, spectral_frames = signal.stft(
+        audio_arr, fs=SAMPLING_RATE, nperseg=SAMPLES_PER_SEGMENT
+    )
     mag_frames = spectral_frames.real
     phase_frames = spectral_frames.imag
     return np.stack([mag_frames, phase_frames])
@@ -27,4 +29,3 @@ def spec_to_audio(spectral_frames):
     spectral_frames = mag + 1j * phase
     _, audio_arr = signal.istft(res_rec, fs=SAMPLING_RATE, nperseg=SAMPLES_PER_SEGMENT)
     return audio_arr
-

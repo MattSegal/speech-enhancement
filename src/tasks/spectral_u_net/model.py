@@ -25,9 +25,7 @@ class SpectralUNet(nn.Module):
         self.middle = ConvLayer(12 * NUM_C, 13 * NUM_C, kernel=15)
 
         # Construct decoders
-        self.upsample = nn.Upsample(
-            scale_factor=2, mode="linear", align_corners=True
-        )
+        self.upsample = nn.Upsample(scale_factor=2, mode="linear", align_corners=True)
         self.decoders = nn.ModuleList()
         self.decoder_res_stacks = nn.ModuleList()
         for i in reversed(range(1, NUM_ENCODER_LAYERS + 1)):

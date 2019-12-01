@@ -9,4 +9,3 @@ def log_training_info(info, use_wandb=False):
 
     if use_wandb:
         wandb.log(info)
-

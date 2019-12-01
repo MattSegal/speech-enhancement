@@ -30,7 +30,9 @@ class NoisyLibreSpeechDataset(S3BackedDataset):
         itr = list if self.quiet else tqdm
         self.clean_data = []
         self.clean_folder = os.path.join(self.data_path, f"{dataset_label}_set")
-        self.clean_filenames = self.find_flac_filenames(self.clean_folder, subsample=subsample)
+        self.clean_filenames = self.find_flac_filenames(
+            self.clean_folder, subsample=subsample
+        )
         if not quiet:
             print(f"Loading {dataset_label} dataset into memory.")
             print("Loading clean data...")
