@@ -34,10 +34,11 @@ class Trainer:
 
     def setup_wandb(self, wandb_project, wandb_name):
         self.wandb_name = wandb_name
-        self.use_wandb = True
-        wandb.init(
-            name=self.wandb_name, project=wandb_project,
-        )
+        self.use_wandb = bool(wandb_name)
+        if self.use_wandb:
+            wandb.init(
+                name=self.wandb_name, project=wandb_project,
+            )
 
     def setup_checkpoints(self, checkpoint_name, checkpoint_epochs):
         self.checkpoint_name = checkpoint_name
