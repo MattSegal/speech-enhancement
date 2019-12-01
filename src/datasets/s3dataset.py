@@ -29,7 +29,7 @@ class S3BackedDataset(Dataset):
         s3.upload_data(self.data_path, self.dataset_name)
 
     def find_wav_filenames(self, folder, subsample=None):
-        return self._find_ext_filenames(".flac", folder, subsample=subsample)
+        return self._find_ext_filenames(".wav", folder, subsample=subsample)
 
     def find_flac_filenames(self, folder, subsample=None):
         return self._find_ext_filenames(".flac", folder, subsample=subsample)
