@@ -19,7 +19,6 @@ from ..models.wave_u_net import WaveUNet
 # Checkpointing
 WANDB_PROJECT = "wave-u-net"
 CHECKPOINT_NAME = "wave-u-net"
-CHECKPOINT_NAME = None
 
 # Training hyperparams
 LEARNING_RATE = 1e-4
@@ -35,8 +34,8 @@ def train(
     num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs
 ):
     trainer = Trainer(num_epochs, wandb_name)
-    # trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
-    # trainer.setup_wandb(setup_wandb)
+    trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
+    trainer.setup_wandb(WANDB_PROJECT, wandb_name)
     train_loader, test_loader = trainer.load_data_loaders(
         Dataset, batch_size, subsample
     )

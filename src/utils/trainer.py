@@ -36,11 +36,11 @@ class Trainer:
             else net_class(**kwargs).cpu()
         )
 
-    def setup_wandb(self, wandb_name):
+    def setup_wandb(self, wandb_project, wandb_name):
         self.wandb_name = wandb_name
         self.use_wandb = True
         wandb.init(
-            name=self.wandb_name, project=WANDB_PROJECT,
+            name=self.wandb_name, project=wandb_project,
         )
 
     def setup_checkpoints(self, checkpoint_name, checkpoint_epochs):
