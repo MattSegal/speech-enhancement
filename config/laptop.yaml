@@ -1,4 +1,4 @@
-task: spectral_u_net
+task: waveunet_train_mse
 checkpoint_epochs: null
 cuda: false
 epochs: 5

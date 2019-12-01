@@ -9,6 +9,7 @@ from torch.utils.checkpoint import checkpoint
 # X         256     OOM             0
 # X         128     4GB             conv layers
 
+NUM_LABELS = 15
 MIN_SAMPLES = 32767
 NUM_SAMPLE_LAYERS = 6
 CONV_LAYERS = [
@@ -36,16 +37,13 @@ class SceneNet(nn.Module):
     Convolutional network used to classify acoustic scenes.
     """
 
-    CHIME = "CHIME"
-    TUT = "TUT"
-    NUM_CHIME_LABELS = 8
-    NUM_TUT_LABELS = 15
-    dataset = TUT
+    feature_mode = False
 
     def __init__(self):
         super().__init__()
         # Initializer feature layers, used for the denoiser loss function.
         self.feature_layers = []
+
         # Create internal convolution layers, for feature extraction.
         layer_idx = 0
         self.conv_layers = []
@@ -56,16 +54,16 @@ class SceneNet(nn.Module):
             self.conv_layers.append(conv_layer)
             setattr(self, layer_name, conv_layer)
 
-        # Used for TUT dataset classfication
+        self.final_conv = nn.Conv1d(
+            in_channels=128, out_channels=NUM_LABELS, kernel_size=1, bias=True,
+        )
         self.softmax = nn.LogSoftmax(dim=1)
-        self.tut_conv = nn.Conv1d(
-            in_channels=128, out_channels=self.NUM_TUT_LABELS, kernel_size=1, bias=True,
-        )
-        # Used for CHiME datset classification
-        self.sigmoid = nn.Sigmoid()
-        self.chime_conv = nn.Conv1d(
-            in_channels=128, out_channels=self.NUM_CHIME_LABELS, kernel_size=1, bias=True,
-        )
+
+    def set_feature_mode(self):
+        self.feature_mode = True
+        for layer in self.conv_layers:
+            for param in layer.parameters():
+                param.requires_grad = False
 
     def forward(self, input_t):
         """
@@ -73,8 +71,10 @@ class SceneNet(nn.Module):
         """
         # Reset feature layers
         self.feature_layers = []
+
         # Convolutional filter expects a 3D input
         batch_size = input_t.shape[0]
+        input_t = input_t.view(batch_size, 1, -1)
         assert len(input_t.shape) == 3  # batch_size, channels, audio
         assert input_t.shape[1] == 1  # only 1 channel initially
         assert input_t.shape[2] >= MIN_SAMPLES  # Receptive field minimum
@@ -85,10 +85,10 @@ class SceneNet(nn.Module):
         acts = input_t
         for idx, conv_layer in enumerate(self.conv_layers):
             acts, conv_acts = checkpoint(conv_layer, acts)
-            if idx < NUM_SAMPLE_LAYERS and not self.dataset:
+            if idx < NUM_SAMPLE_LAYERS and self.feature_mode:
                 # Store feature layers for feature loss.
                 self.feature_layers.append(conv_acts)
-            elif not self.dataset:
+            elif self.feature_mode:
                 # Bail early because we don't care about the output.
                 return
 
@@ -98,57 +98,21 @@ class SceneNet(nn.Module):
         # (batch_size, num_channels)
         # torch.Size([256, 128, 1])
 
-        if self.dataset == self.TUT:
-            # Pool channels with 1x1 convolution
-            final_conv_acts = self.tut_conv(pooled_acts)
-            # (batch_size, num_labels, 1)
-            # torch.Size([256, 15, 1])
+        # Pool channels with 1x1 convolution
+        final_conv_acts = self.final_conv(pooled_acts)
+        # (batch_size, num_labels, 1)
+        # torch.Size([256, 15, 1])
 
-            final_conv_acts = final_conv_acts.squeeze(dim=2)
-            assert final_conv_acts.shape[0] == batch_size
-            assert final_conv_acts.shape[1] == self.NUM_TUT_LABELS
-            # torch.Size([256, 15])
+        final_conv_acts = final_conv_acts.squeeze(dim=2)
+        assert final_conv_acts.shape[0] == batch_size
+        assert final_conv_acts.shape[1] == NUM_LABELS
+        # torch.Size([256, 15])
 
-            # # Run softmax over activations to produce the final probability distribution
-            prediction_t = self.softmax(final_conv_acts)
-            # torch.Size([256, 15])
-            assert prediction_t.shape[1] == self.NUM_TUT_LABELS
-            return prediction_t
-        else:
-            # Pool channels with 1x1 convolution
-            final_conv_acts = self.chime_conv(pooled_acts)
-            # (batch_size, num_labels, 1)
-            # torch.Size([256, 8, 1])
-
-            final_conv_acts = final_conv_acts.squeeze(dim=2)
-            assert final_conv_acts.shape == (batch_size, self.NUM_CHIME_LABELS)
-            # torch.Size([256, 8])
-
-            # Run sigmoid over activation to get a probability
-            prediction_t = self.sigmoid(final_conv_acts)
-            # torch.Size([256, 8])
-            assert prediction_t.shape == (batch_size, self.NUM_CHIME_LABELS)
-            return prediction_t
-
-    def set_tut_dataset(self):
-        self.dataset = self.TUT
-
-    def set_chime_dataset(self):
-        self.dataset = self.CHIME
-
-    def set_feature_mode(self):
-        self.dataset = None
-        # Maybe makes no difference?
-        for layer in self.conv_layers:
-            for param in layer.parameters():
-                param.requires_grad = False
-
-    @property
-    def num_labels(self):
-        if self.dataset == self.CHIME:
-            return self.NUM_CHIME_LABELS
-        else:
-            return self.NUM_TUT_LABELS
+        # # Run softmax over activations to produce the final probability distribution
+        prediction_t = self.softmax(final_conv_acts)
+        # torch.Size([256, 15])
+        assert prediction_t.shape[1] == NUM_LABELS
+        return prediction_t
 
 
 class ConvLayer(nn.Module):

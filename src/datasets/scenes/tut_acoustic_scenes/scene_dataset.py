@@ -40,7 +40,7 @@ class SceneDataset(Dataset):
 
     labels = CLASS_LABELS
 
-    def __init__(self, train):
+    def __init__(self, train, subsample=None):
         """
         Load the dataset into memory so it can be used for training.
         """
@@ -76,6 +76,9 @@ class SceneDataset(Dataset):
         wav_files = [
             filename for filename in os.listdir(data_folder) if filename.endswith(".wav")
         ]
+
+        if subsample:
+            wav_files = wav_files[:subsample]
 
         for filename in tqdm(wav_files):
             # Get the label for this file

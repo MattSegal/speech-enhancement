@@ -12,7 +12,7 @@ From "Improved Speech Enhancement with the Wave-U-Net"
 """
 import torch.nn as nn
 
-from src.datasets import NoisyLibreSpeechDataset as Dataset, NoisyScenesDataset
+from src.datasets import NoisySpeechDataset as Dataset
 
 from ..models.wave_u_net import WaveUNet
 
@@ -22,7 +22,7 @@ CHECKPOINT_NAME = "wave-u-net"
 
 # Training hyperparams
 LEARNING_RATE = 1e-4
-ADAM_BETAS = (0.9, 0.999)
+ADAM_BETAS = (0.9, 0.99)
 WEIGHT_DECAY = 1e-6
 
 from src.utils.trainer import Trainer
@@ -34,10 +34,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     trainer = Trainer(num_epochs, wandb_name)
     trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
     trainer.setup_wandb(WANDB_PROJECT, wandb_name)
-    noise_data = NoisyScenesDataset(subsample=subsample)
-    train_loader, test_loader = trainer.load_data_loaders(
-        Dataset, batch_size, subsample, noise_data=noise_data
-    )
+    train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
     trainer.register_loss_fn(get_mse_loss)
     trainer.register_metric_fn(get_mse_metric, "Loss")
     trainer.input_shape = [2 ** 15]
