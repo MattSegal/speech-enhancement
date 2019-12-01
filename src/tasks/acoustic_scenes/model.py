@@ -59,18 +59,12 @@ class SceneNet(nn.Module):
         # Used for TUT dataset classfication
         self.softmax = nn.LogSoftmax(dim=1)
         self.tut_conv = nn.Conv1d(
-            in_channels=128,
-            out_channels=self.NUM_TUT_LABELS,
-            kernel_size=1,
-            bias=True,
+            in_channels=128, out_channels=self.NUM_TUT_LABELS, kernel_size=1, bias=True,
         )
         # Used for CHiME datset classification
         self.sigmoid = nn.Sigmoid()
         self.chime_conv = nn.Conv1d(
-            in_channels=128,
-            out_channels=self.NUM_CHIME_LABELS,
-            kernel_size=1,
-            bias=True,
+            in_channels=128, out_channels=self.NUM_CHIME_LABELS, kernel_size=1, bias=True,
         )
 
     def forward(self, input_t):

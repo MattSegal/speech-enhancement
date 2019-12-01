@@ -88,13 +88,9 @@ for epoch in range(NUM_EPOCHS):
     if epoch % CHECKPOINT_EPOCHS == 0:
         checkpoint_path = save_checkpoint(net, "scene-net", name=WANDB_NAME)
 
-    data_loader = CombinedDataLoader(
-        chime_training_data_loader, tut_training_data_loader
-    )
+    data_loader = CombinedDataLoader(chime_training_data_loader, tut_training_data_loader)
     num_samples = min([len(chime_training_set), len(tut_training_set)])
-    num_samples_validation = min(
-        [len(chime_validation_set), len(tut_validation_set)]
-    )
+    num_samples_validation = min([len(chime_validation_set), len(tut_validation_set)])
     chime_training_accuracy = HammingLossTracker(num_samples, 8)
     tut_training_accuracy = AccuracyTracker(num_samples)
     chime_validation_accuracy = HammingLossTracker(num_samples_validation, 8)
@@ -129,9 +125,7 @@ for epoch in range(NUM_EPOCHS):
 
         # Run loss function on over the model's prediction
         labels = labels.cuda() if USE_CUDA else labels.cpu()
-        expect_labels_shape = (
-            (batch_size, net.num_labels) if use_chime else (batch_size,)
-        )
+        expect_labels_shape = (batch_size, net.num_labels) if use_chime else (batch_size,)
         assert labels.shape == expect_labels_shape
         loss = criterion(outputs, labels)
 

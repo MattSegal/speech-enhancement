@@ -69,7 +69,9 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
 
     disc_net.train()
     gan_loss = LeastSquaresLoss(disc_net)
-    optimizer_disc = optim.AdamW(disc_net.parameters(), lr=DISC_LEARNING_RATE, betas=ADAM_BETAS)
+    optimizer_disc = optim.AdamW(
+        disc_net.parameters(), lr=DISC_LEARNING_RATE, betas=ADAM_BETAS
+    )
 
     # Keep track of loss history using moving average
     disc_loss = MovingAverage(decay=0.8)

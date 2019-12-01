@@ -31,6 +31,4 @@ class ProgressBar:
 
     def __exit__(self, *args):
         self.progress.close()
-        print(
-            f"epoch {self.epoch + 1} / {self.total_epochs}, loss: {self.loss:0.4f}"
-        )
+        print(f"epoch {self.epoch + 1} / {self.total_epochs}, loss: {self.loss:0.4f}")
