@@ -22,8 +22,8 @@ CHECKPOINT_NAME = "wave-u-net"
 
 # Training hyperparams
 LEARNING_RATE = 1e-4
-ADAM_BETAS = (0.9, 0.99)
-WEIGHT_DECAY = 1e-6
+ADAM_BETAS = (0.5, 0.9)
+WEIGHT_DECAY = 1e-4
 
 from src.utils.trainer import Trainer
 
