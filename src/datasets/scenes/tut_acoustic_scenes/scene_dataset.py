@@ -9,7 +9,7 @@ from scipy.io import wavfile
 
 from src.datasets.s3dataset import S3BackedDataset
 
-DATASET_NAME = "noisy_speech"
+DATASET_NAME = "scenes"
 DATA_PATH = "data/"
 CHUNK_SIZE = 32767
 SUB_SAMPLE = False
@@ -78,9 +78,7 @@ class SceneDataset(S3BackedDataset):
         print("Loading data...")
         self.data = []
         self.data_labels = []
-        wav_files = [
-            filename for filename in os.listdir(data_folder) if filename.endswith(".wav")
-        ]
+        wav_files = [filename for filename in os.listdir(data_folder) if filename.endswith(".wav")]
 
         if subsample:
             wav_files = wav_files[:subsample]
