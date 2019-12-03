@@ -45,8 +45,8 @@ class Trainer:
     def load_data_loaders(self, dataset, batch_size, subsample, **kwargs):
         self.train_set = dataset(train=True, subsample=subsample, **kwargs)
         self.test_set = dataset(train=False, subsample=subsample, **kwargs)
-        train_loader = self.load_data_loader(train_set, batch_size)
-        test_loader = self.load_data_loader(test_set, batch_size)
+        train_loader = self.load_data_loader(self.train_set, batch_size)
+        test_loader = self.load_data_loader(self.test_set, batch_size)
         return train_loader, test_loader
 
     def load_data_loader(self, dataset, batch_size):

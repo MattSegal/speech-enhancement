@@ -72,10 +72,10 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     trainer.train(gen_net, num_epochs, gen_optimizer, gen_train_loader, gen_test_loader)
 
     # Next, train GAN using the output of the generator
-    def get_disc_loss(dunno, dunno, dunno):
-        return disc_loss.for_discriminator(dunno, dunno)
+    def get_disc_loss(dunno1, dunno2, dunno):
+        return disc_loss.for_discriminator(dunno1, dunno2)
 
-    def get_disc_metric(dunno, dunno, dunno):
+    def get_disc_metric(dunno1, dunno2, dunno):
         loss_t = dic_loss.for_discriminator
         return loss_t.data.item()
 
@@ -90,10 +90,10 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     )
 
     # Finally, train the generator using the discriminator and MSE loss
-    def get_gen_loss(dunno, dunno, dunno):
-        return disc_loss.for_generator(dunno, dunno)
+    def get_gen_loss(dunno1, dunno2, dunno):
+        return disc_loss.for_generator(dunno1, dunno2)
 
-    def get_gen_metric(dunno, dunno, dunno):
+    def get_gen_metric(dunno1, dunno2, dunno):
         loss_t = dic_loss.for_generator
         return loss_t.data.item()
 
