@@ -32,13 +32,11 @@ class Trainer:
     def load_net(self, net_class, **kwargs):
         return net_class(**kwargs).cuda() if self.use_cuda else net_class(**kwargs).cpu()
 
-    def setup_wandb(self, wandb_project, wandb_name):
+    def setup_wandb(self, wandb_project, wandb_name, config={}):
         self.wandb_name = wandb_name
         self.use_wandb = bool(wandb_name)
         if self.use_wandb:
-            wandb.init(
-                name=self.wandb_name, project=wandb_project,
-            )
+            wandb.init(name=self.wandb_name, project=wandb_project, config=config)
 
     def setup_checkpoints(self, checkpoint_name, checkpoint_epochs):
         self.checkpoint_name = checkpoint_name

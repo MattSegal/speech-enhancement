@@ -6,6 +6,7 @@ Batch size of 128 works well, ~200 epochs required.
 """
 import torch.nn as nn
 
+from src.utils.trainer import Trainer
 from src.datasets import SceneDataset as Dataset
 
 from .model import SceneNet
@@ -17,9 +18,8 @@ CHECKPOINT_NAME = "scene-net"
 # Training hyperparams
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.9, 0.999)
-WEIGHT_DECAY = 1e-6
+WEIGHT_DECAY = 1e-2
 
-from src.utils.trainer import Trainer
 
 cross_entropy_loss = nn.CrossEntropyLoss()
 
@@ -27,7 +27,18 @@ cross_entropy_loss = nn.CrossEntropyLoss()
 def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
     trainer = Trainer(num_epochs, wandb_name)
     trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
-    trainer.setup_wandb(WANDB_PROJECT, wandb_name)
+    trainer.setup_wandb(
+        WANDB_PROJECT,
+        wandb_name,
+        config={
+            "Batch Size": batch_size,
+            "Epochs": num_epochs,
+            "Adam Betas": ADAM_BETAS,
+            "Learning Rate": LEARNING_RATE,
+            "Weight Decay": WEIGHT_DECAY,
+            "Fine Tuning": True,
+        },
+    )
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
     trainer.register_loss_fn(get_ce_loss)
     trainer.register_metric_fn(get_ce_metric, "Loss")
