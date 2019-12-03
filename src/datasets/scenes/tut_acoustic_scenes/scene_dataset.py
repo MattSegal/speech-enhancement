@@ -7,6 +7,9 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 from scipy.io import wavfile
 
+from src.datasets.s3dataset import S3BackedDataset
+
+DATASET_NAME = "noisy_speech"
 DATA_PATH = "data/"
 CHUNK_SIZE = 32767
 SUB_SAMPLE = False
@@ -29,8 +32,10 @@ CLASS_LABELS = [
 ]
 
 
-class SceneDataset(Dataset):
+class SceneDataset(S3BackedDataset):
     """
+    TUT acoustic scenes dataset.
+
     A dataset of acoustic scenes and their label, for use in the acoustic scene classification task.
     The input is a 1D tensor of floats, representing a complete noisy audio sample.
     The target is an integer, representing a scene label. 
@@ -40,14 +45,14 @@ class SceneDataset(Dataset):
 
     labels = CLASS_LABELS
 
-    def __init__(self, train, subsample=None):
+    def __init__(self, train, subsample=None, quiet=False):
         """
         Load the dataset into memory so it can be used for training.
         """
-        self.train = train
-        dataset_label = "training" if train else "validation"
+        super().__init__(dataset_name=DATASET_NAME, quiet=quiet)
+        dataset_label = "train" if train else "test"
+        data_folder = os.path.join(DATA_PATH, "scenes", f"{dataset_label}_set")
         print(f"\nLoading TUT {dataset_label} dataset into memory.")
-        data_folder = os.path.join(DATA_PATH, f"scenes_{dataset_label}_set")
 
         # Load class labels from a text file.
         print("Loading class labels...")
@@ -140,41 +145,3 @@ def split_even_chunks(input_arr):
     end = offset + even_length
     chunks = np.split(input_arr[start:end], num_chunks)
     return chunks
-
-
-# Unused
-def normalize_audio(input_arr):
-    """
-    Normalize audio so each file is bound between +/- 1
-    """
-    signal_range = input_arr.max() - input_arr.min()
-    return (2 * (input_arr - input_arr.min()) - 1) / signal_range
-
-
-# Unused
-def add_noise(input_arr):
-    """
-    Add random noise for training-time data augmentation
-    """
-    noise = np.random.randn(len(input_arr)) / 100
-    return input_arr + noise.astype("float32")
-
-
-# Unused
-def sample_random_chunk(input_arr):
-    """
-    Randomly sample length of audio then pad it with zeros, so that it's always
-    the same size as all other samples (required for mini-batching)
-    """
-    # Determine chunk width
-    random_exponent = np.random.uniform(
-        np.log10(MIN_CHUNK_SIZE - 0.5), np.log10(MAX_CHUNK_SIZE + 0.5)
-    )
-    chunk_width = int(np.round(10.0 ** random_exponent))
-    chunk_start = np.random.randint(0, np.size(input_arr) - chunk_width + 1)
-    # Extract chunk from input
-    input_arr = input_arr[chunk_start : chunk_start + chunk_width]
-    # Pad the chunk with zeros to be a uniform length.
-    padding = MAX_CHUNK_SIZE - input_arr.size
-    input_arr = np.pad(input_arr, (0, padding))
-    return input_arr
