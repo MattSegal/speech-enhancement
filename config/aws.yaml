@@ -1,5 +1,5 @@
-task: scene_net_train
+task: waveunet_train_mse
 cuda: true
-checkpoint_epochs: 100
-epochs: 400
-batch_size: 128
+checkpoint_epochs: 8
+epochs: 24
+batch_size: 8
