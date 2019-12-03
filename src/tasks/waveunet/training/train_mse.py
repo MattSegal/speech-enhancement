@@ -13,6 +13,7 @@ From "Improved Speech Enhancement with the Wave-U-Net"
 import torch.nn as nn
 
 from src.datasets import NoisySpeechDataset as Dataset
+from src.utils.trainer import Trainer
 
 from ..models.wave_u_net import WaveUNet
 
@@ -24,8 +25,6 @@ CHECKPOINT_NAME = "wave-u-net"
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
 WEIGHT_DECAY = 1e-4
-
-from src.utils.trainer import Trainer
 
 mse = nn.MSELoss()
 

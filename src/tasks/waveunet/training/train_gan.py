@@ -1,24 +1,25 @@
-import random
+"""
+Train WaveUNet on the noisy VCTK dataset using MSE + GAN
 
+Batch size of ?? uses approx ??GB of GPU memory.
+
+TODO: Add code from gan_old then implement NoGAN training schedule
+https://github.com/jantic/DeOldify#what-is-nogan
+"""
 import torch
-import torch.optim as optim
 import torch.nn as nn
-from tqdm import tqdm
-from torch.utils.data import DataLoader
-import wandb
+from torch.utils.data import Dataset
 
-from src.utils import checkpoint
-from src.utils.trackers import MovingAverage
+from src.datasets import NoisySpeechDataset
 from src.utils.loss import LeastSquaresLoss
-from src.utils.log import log_training_info
-from src.datasets import NoisyLibreSpeechDataset as Dataset, NoisyScenesDataset
+from src.utils.trainer import Trainer
 
 from ..models.wave_u_net import WaveUNet
 from ..models.mel_discriminator import MelDiscriminatorNet
 
 # Checkpointing
-CHECKPOINT_NAME = "wave-u-net"
 WANDB_PROJECT = "wave-u-net"
+CHECKPOINT_NAME = "wave-u-net"
 
 # Training hyperparams
 LEARNING_RATE = 1e-4
@@ -28,152 +29,107 @@ DISC_WEIGHT = 1e-1
 DISC_LEARNING_RATE = 4 * LEARNING_RATE
 
 
+mse = nn.MSELoss()
+
+
 def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
-    use_wandb = bool(wandb_name)
-    if use_wandb:
-        wandb.init(
-            name=wandb_name,
-            project=WANDB_PROJECT,
-            config={
-                "Epochs": num_epochs,
-                "Batch Size": batch_size,
-                "Learning Rate": LEARNING_RATE,
-                "Adam Betas": ADAM_BETAS,
-                "Weight Decay": WEIGHT_DECAY,
-            },
-        )
+    trainer = Trainer(num_epochs, wandb_name)
+    trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
+    trainer.setup_wandb(WANDB_PROJECT, wandb_name)
 
-    # Load datasets
-    noise_set = NoisyScenesDataset(subsample=subsample)
-    training_set = Dataset(noise_data=noise_set, train=True, subsample=subsample)
-    validation_set = Dataset(noise_data=noise_set, train=False, subsample=subsample)
-
-    # Construct data loaders
-    training_data_loader = DataLoader(
-        training_set, batch_size=batch_size, shuffle=True, num_workers=3
+    # Construct generator network
+    gen_net = trainer.load_net(WaveUNet)
+    gen_optimizer = trainer.load_optimizer(
+        gen_net,
+        learning_rate=LEARNING_RATE,
+        adam_betas=ADAM_BETAS,
+        weight_decay=WEIGHT_DECAY,
     )
-    validation_data_loader = DataLoader(
-        validation_set, batch_size=batch_size, shuffle=True, num_workers=3
+    gen_train_loader, gen_test_loader = trainer.load_data_loaders(
+        NoisySpeechDataset, batch_size, subsample
     )
 
-    # Initialize model
-    net = WaveUNet().cuda() if use_cuda else WaveUNet().cpu()
+    # Construct discriminator network
+    disc_net = trainer.load_net(MelDiscriminatorNet)
+    disc_optimizer = trainer.load_optimizer(
+        disc_net,
+        learning_rate=DISC_LEARNING_RATE,
+        adam_betas=ADAM_BETAS,
+        weight_decay=WEIGHT_DECAY,
+    )
+    disc_train_dataset = GeneratorDataset(gen_net, trainer.train_set)
+    disc_test_dataset = GeneratorDataset(gen_net, trainer.test_set)
+    disc_train_loader = trainer.load_data_loader(disc_train_dataset, batch_size)
+    disc_test_loader = trainer.load_data_loader(disc_test_dataset, batch_size)
+    disc_loss = LeastSquaresLoss(disc_net)
 
-    # Initialize optmizer
-    optimizer = optim.AdamW(
-        net.parameters(), lr=LEARNING_RATE, betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
+    # First, train generator using MSE loss
+    trainer.register_loss_fn(get_mse_loss)
+    trainer.register_metric_fn(get_mse_metric, "Loss")
+    trainer.input_shape = [2 ** 15]
+    trainer.target_shape = [2 ** 15]
+    trainer.output_shape = [2 ** 15]
+    trainer.train(gen_net, num_epochs, gen_optimizer, gen_train_loader, gen_test_loader)
+
+    # Next, train GAN using the output of the generator
+    def get_disc_loss(dunno, dunno, dunno):
+        return disc_loss.for_discriminator(dunno, dunno)
+
+    def get_disc_metric(dunno, dunno, dunno):
+        loss_t = dic_loss.for_discriminator
+        return loss_t.data.item()
+
+    trainer.loss_fns = []
+    trainer.metric_fns = []
+    trainer.register_loss_fn(get_disc_loss)
+    trainer.register_metric_fn(get_disc_metric, "Discriminator Loss")
+    trainer.input_shape = [2 ** 15]
+    trainer.target_shape = [2 ** 15]
+    trainer.train(
+        disc_net, num_epochs, disc_optimizer, disc_train_loader, disc_test_loader
     )
 
-    # Initialize discriminator loss function, optimizer
-    disc_net = MelDiscriminatorNet().cuda() if use_cuda else MelDiscriminatorNet().cpu()
+    # Finally, train the generator using the discriminator and MSE loss
+    def get_gen_loss(dunno, dunno, dunno):
+        return disc_loss.for_generator(dunno, dunno)
 
-    disc_net.train()
-    gan_loss = LeastSquaresLoss(disc_net)
-    optimizer_disc = optim.AdamW(
-        disc_net.parameters(), lr=DISC_LEARNING_RATE, betas=ADAM_BETAS
+    def get_gen_metric(dunno, dunno, dunno):
+        loss_t = dic_loss.for_generator
+        return loss_t.data.item()
+
+    trainer.loss_fns = []
+    trainer.metric_fns = []
+    trainer.register_loss_fn(get_mse_loss)
+    trainer.register_loss_fn(get_gen_loss)
+    trainer.register_metric_fn(get_mse_metric, "Loss")
+    trainer.register_metric_fn(get_gen_metric, "Discriminator Loss")
+    trainer.input_shape = [2 ** 15]
+    trainer.target_shape = [2 ** 15]
+    trainer.train(
+        disc_net, num_epochs, disc_optimizer, disc_train_loader, disc_test_loader
     )
 
-    # Keep track of loss history using moving average
-    disc_loss = MovingAverage(decay=0.8)
-    gen_loss = MovingAverage(decay=0.8)
-    training_loss = MovingAverage(decay=0.8)
-    validation_loss = MovingAverage(decay=0.8)
-    mean_squared_error = nn.MSELoss()
-    training_mse = MovingAverage(decay=0.8)
-    validation_mse = MovingAverage(decay=0.8)
 
-    # Run training for some number of epochs.
-    for epoch in range(num_epochs):
-        print(f"\nEpoch {epoch + 1} / {num_epochs}\n")
-        torch.cuda.empty_cache()
+def get_mse_loss(inputs, outputs, targets):
+    return mse(outputs, targets)
 
-        # Save checkpoint periodically.
-        is_checkpoint_epoch = checkpoint_epochs and epoch % checkpoint_epochs == 0
-        if CHECKPOINT_NAME and is_checkpoint_epoch:
-            checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name)
 
-        # Run training loop
-        net.train()
-        for inputs, targets in tqdm(training_data_loader):
-            inputs = inputs.cuda() if use_cuda else inputs.cpu()
-            targets = targets.cuda() if use_cuda else targets.cpu()
+def get_mse_metric(inputs, outputs, targets):
+    mse_t = mse(outputs, targets)
+    return mse_t.data.item()
 
-            # 10% of the time, have no noise at all
-            is_clean_input = random.random() <= 0.1
-            if is_clean_input:
-                inputs = targets
 
-            # Add channel dimension to input
-            batch_size = inputs.shape[0]
-            audio_length = inputs.shape[1]
-            inputs = inputs.view(batch_size, 1, -1)
+class GeneratorDataset(Dataset):
+    def __init__(self, gen_net, dataset):
+        self.gen_net = gen_net
+        self.dataset = dataset
 
-            # Get a prediction from the model
-            optimizer.zero_grad()
-            outputs = net(inputs)
-            outputs = outputs.squeeze(dim=1)
-            assert outputs.shape == (batch_size, audio_length)
-
-            # Run loss function on over the model's prediction
-            assert targets.shape == (batch_size, audio_length)
-            mse_loss_t = mean_squared_error(outputs, targets)
-
-            # Add discriminator to loss function
-            fake_audio = outputs.view(batch_size, 1, -1)
-            gen_gan_loss = gan_loss.for_generator(inputs, fake_audio)
-
-            loss = mse_loss_t + DISC_WEIGHT * gen_gan_loss
-
-            # Calculate model weight gradients from the loss and update model.
-            loss.backward()
-            optimizer.step()
-
-            # Track training information
-            loss_amount = mse_loss_t.data.item()
-            training_loss.update(loss_amount)
-            mse = mean_squared_error(outputs, targets).data.item()
-            training_mse.update(mse)
-            loss_amount = gen_gan_loss.data.item()
-            gen_loss.update(loss_amount)
-
-            # Train discriminator
-            optimizer_disc.zero_grad()
-            fake_audio = outputs.view(batch_size, 1, -1).detach()
-            disc_gan_loss = gan_loss.for_discriminator(inputs, fake_audio)
-            disc_gan_loss.backward()
-            optimizer_disc.step()
-
-            # Track disc training information
-            loss_amount = disc_gan_loss.data.item()
-            disc_loss.update(loss_amount)
-
-        # Check performance (loss) on validation set.
-        net.eval()
+    def __getitem__(self, idx):
+        """
+        Get item by integer index,
+        """
+        noisy, real_clean = self.dataset[idx]
         with torch.no_grad():
-            for inputs, targets in tqdm(validation_data_loader):
-                batch_size = inputs.shape[0]
-                audio_length = inputs.shape[1]
-                inputs = inputs.view(batch_size, 1, -1)
-                inputs = inputs.cuda() if use_cuda else inputs.cpu()
-                targets = targets.cuda() if use_cuda else targets.cpu()
-                outputs = net(inputs)
-                outputs = outputs.squeeze(dim=1)
-                loss = mean_squared_error(outputs, targets)
-                loss_amount = loss.data.item()
-                validation_loss.update(loss_amount)
-                mse = mean_squared_error(outputs, targets).data.item()
-                validation_mse.update(mse)
+            fake_clean = self.gen_net(noisy)
 
-        log_training_info(
-            {
-                "Training Loss": training_mse.value,
-                "Validation Loss": validation_mse.value,
-                "Discriminator Loss": disc_loss.value,
-                "Generator Loss": gen_loss.value,
-            },
-            use_wandb=use_wandb,
-        )
-
-    # Save final model checkpoint
-    if CHECKPOINT_NAME:
-        checkpoint.save(net, CHECKPOINT_NAME, name=wandb_name, use_wandb=use_wandb)
+        return real_clean, fake_clean

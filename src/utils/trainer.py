@@ -43,15 +43,14 @@ class Trainer:
         self.checkpoint_epochs = checkpoint_epochs
 
     def load_data_loaders(self, dataset, batch_size, subsample, **kwargs):
-        train_set = dataset(train=True, subsample=subsample, **kwargs)
-        test_set = dataset(train=False, subsample=subsample, **kwargs)
-        train_loader = DataLoader(
-            train_set, batch_size=batch_size, shuffle=True, num_workers=3
-        )
-        test_loader = DataLoader(
-            test_set, batch_size=batch_size, shuffle=True, num_workers=3
-        )
+        self.train_set = dataset(train=True, subsample=subsample, **kwargs)
+        self.test_set = dataset(train=False, subsample=subsample, **kwargs)
+        train_loader = self.load_data_loader(train_set, batch_size)
+        test_loader = self.load_data_loader(test_set, batch_size)
         return train_loader, test_loader
+
+    def load_data_loader(self, dataset, batch_size):
+        return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=3)
 
     def load_optimizer(self, net, learning_rate, adam_betas, weight_decay):
         return optim.AdamW(
@@ -142,7 +141,7 @@ class Trainer:
             training_info = {}
             for _, name, train_tracker, test_tracker in self.metric_fns:
                 training_info[f"Training {name}"] = train_tracker.value
-                training_info[f"Validation {name}"] = train_tracker.value
+                training_info[f"Validation {name}"] = test_tracker.value
 
             log_training_info(
                 training_info, use_wandb=self.use_wandb,
