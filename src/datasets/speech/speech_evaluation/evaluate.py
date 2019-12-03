@@ -27,10 +27,10 @@ CHECKPOINTS = [
         "name": "More data U net MSE with 2s window",
         "file": "wave-u-net-mse-libre-2s-audio-redux-1575128628.full.ckpt",
     },
-    # {
-    #     "name": "More data U net MSE with 4s window",
-    #     "file": "wave-u-net-mse-noisy-libre-ablation-fixed-1574928689.full.ckpt",
-    # },
+    {
+        "name": "WaveUNet with MSE loss",
+        "file": "wave-u-net-mse-try-replicate-success-2-1575377123.full.ckpt",
+    },
     {"name": "U-net with MSE loss", "file": "wave-u-net-mse-onlyy-1573200273.full.ckpt"},
     {
         "name": "U-net with feature loss",
