@@ -61,6 +61,9 @@ class SceneNet(nn.Module):
 
     def set_feature_mode(self):
         self.feature_mode = True
+        for param in self.parameters():
+            param.requires_grad = False
+
         for layer in self.conv_layers:
             for param in layer.parameters():
                 param.requires_grad = False

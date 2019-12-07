@@ -1,9 +1,8 @@
 """
-Train WaveUNet on the noisy VCTK dataset using feature loss + MSE
+Train WaveUNet on the noisy VCTK dataset using feature loss
 
-Batch size of 8 uses approx ??GB of GPU memory.
+Batch size of 32 uses approx 5GB of GPU memory.
 
-FIXME: ADD THIS BACK - use new scenes model
 """
 import torch.nn as nn
 
@@ -19,11 +18,11 @@ WANDB_PROJECT = "wave-u-net"
 CHECKPOINT_NAME = "wave-u-net"
 
 # Loss net
-LOSS_NET_CHECKPOINT = "scene-net-long-train.ckpt"
+LOSS_NET_CHECKPOINT = "scene-net-scene-retrain-2-1575380038.full.ckpt"
 
 # Training hyperparams
 LEARNING_RATE = 1e-4
-ADAM_BETAS = (0.5, 0.9)
+ADAM_BETAS = (0.9, 0.99)
 WEIGHT_DECAY = 1e-4
 
 
@@ -40,21 +39,29 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     feature_loss = AudioFeatureLoss(loss_net, use_cuda=use_cuda)
 
     def get_feature_loss(inputs, outputs, targets):
-        return feature_loss(outputs, targets)
+        return feature_loss(inputs, outputs, targets)
 
     def get_feature_loss_metric(inputs, outputs, targets):
-        loss_t = feature_loss(outputs, targets)
+        loss_t = feature_loss(inputs, outputs, targets)
         return loss_t.data.item()
 
     trainer = Trainer(num_epochs, wandb_name)
     trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
-    trainer.setup_wandb(WANDB_PROJECT, wandb_name)
-    noise_data = NoisyScenesDataset(subsample=subsample)
-    train_loader, test_loader = trainer.load_data_loaders(
-        Dataset, batch_size, subsample, noise_data=noise_data
+    trainer.setup_wandb(
+        WANDB_PROJECT,
+        wandb_name,
+        config={
+            "Batch Size": batch_size,
+            "Epochs": num_epochs,
+            "Adam Betas": ADAM_BETAS,
+            "Learning Rate": LEARNING_RATE,
+            "Weight Decay": WEIGHT_DECAY,
+            "Fine Tuning": False,
+        },
     )
+    train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
     trainer.register_loss_fn(get_feature_loss)
-    trainer.register_metric_fn(get_mse_metric, "Loss")
+    trainer.register_metric_fn(get_feature_loss_metric, "Loss")
     trainer.register_metric_fn(get_mse_metric, "Feature Loss")
     trainer.input_shape = [2 ** 15]
     trainer.target_shape = [2 ** 15]
@@ -66,15 +73,6 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
         adam_betas=ADAM_BETAS,
         weight_decay=WEIGHT_DECAY,
     )
-    trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
-    # Do a fine tuning run with 1/10th learning rate for 1/3rd epochs.
-    optimizer = trainer.load_optimizer(
-        net,
-        learning_rate=LEARNING_RATE / 10,
-        adam_betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY / 10,
-    )
-    num_epochs = num_epochs // 3
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
 
 

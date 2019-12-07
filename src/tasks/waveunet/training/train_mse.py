@@ -46,7 +46,10 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
     # Do a fine tuning run with 1/10th learning rate for 1/3rd epochs.
     optimizer = trainer.load_optimizer(
-        net, learning_rate=LEARNING_RATE / 10, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY / 10
+        net,
+        learning_rate=LEARNING_RATE / 10,
+        adam_betas=ADAM_BETAS,
+        weight_decay=WEIGHT_DECAY / 10,
     )
     num_epochs = num_epochs // 3
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
