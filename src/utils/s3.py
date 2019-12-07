@@ -4,7 +4,7 @@ import subprocess
 DATA_S3_BUCKET = "matt-segal-datasets"
 
 
-def fetch_data(bucket_dir, target_dir, quiet=False):
+def fetch_data(bucket_dir, target_dir, quiet=True):
     """
     Recursively copy files from bucket dir to target dir
     """
@@ -14,7 +14,7 @@ def fetch_data(bucket_dir, target_dir, quiet=False):
     subprocess.run(args=[cmd], shell=True, check=True)
 
 
-def upload_data(source_dir, bucket_dir, quiet=False):
+def upload_data(source_dir, bucket_dir, quiet=True):
     """
     Recursively copy files from source dir to bucket dir
     """
@@ -24,7 +24,7 @@ def upload_data(source_dir, bucket_dir, quiet=False):
     subprocess.run(args=[cmd], shell=True, check=True)
 
 
-def upload_file(bucket_dir, file_path, quiet=False):
+def upload_file(bucket_dir, file_path, quiet=True):
     """
     Upload a file from file_path to the bucket_dir
     """
@@ -35,7 +35,7 @@ def upload_file(bucket_dir, file_path, quiet=False):
     subprocess.run(args=[cmd], shell=True, check=True)
 
 
-def download_file(s3_path, file_path, quiet=False):
+def download_file(s3_path, file_path, quiet=True):
     """
     Download a file from s3_path to file_path
     """

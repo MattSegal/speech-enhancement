@@ -20,7 +20,7 @@ class NoisySpeechDataset(S3BackedDataset):
     The target is a 1D tensor of floats, representing a corresponding clean audio sample. 
     """
 
-    def __init__(self, train, subsample=None, quiet=False):
+    def __init__(self, train, subsample=None, quiet=True):
         self.quiet = quiet
         super().__init__(dataset_name=DATASET_NAME, quiet=quiet)
         dataset_label = "training" if train else "validation"
@@ -30,9 +30,7 @@ class NoisySpeechDataset(S3BackedDataset):
 
         self.clean_data = []
         self.clean_folder = os.path.join(self.data_path, f"{dataset_label}_set_clean")
-        self.wav_filenames = self.find_wav_filenames(
-            self.clean_folder, subsample=subsample
-        )
+        self.wav_filenames = self.find_wav_filenames(self.clean_folder, subsample=subsample)
         self.load_and_trim_data(self.wav_filenames, self.clean_folder, self.clean_data)
         if not quiet:
             print("Loading noisy data...")

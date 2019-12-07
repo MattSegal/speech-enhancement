@@ -20,7 +20,7 @@ class NoisyScenesDataset(S3BackedDataset):
     Originally taken from the TUT acoustic scenes dataset.
     """
 
-    def __init__(self, subsample=None, quiet=False):
+    def __init__(self, subsample=None, quiet=True):
         self.quiet = quiet
         super().__init__(dataset_name=DATASET_NAME, quiet=quiet)
         itr = list if self.quiet else tqdm

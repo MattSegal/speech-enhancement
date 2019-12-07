@@ -8,7 +8,7 @@ from src.utils import s3
 
 
 class S3BackedDataset(Dataset):
-    def __init__(self, dataset_name, quiet=False):
+    def __init__(self, dataset_name, quiet=True):
         self.dataset_name = dataset_name
         self.data_path = os.path.join("data", self.dataset_name)
         self.quiet = quiet

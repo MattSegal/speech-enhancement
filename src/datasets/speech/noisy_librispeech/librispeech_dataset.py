@@ -22,7 +22,7 @@ class NoisyLibreSpeechDataset(S3BackedDataset):
     The target is a 1D tensor of floats, representing a corresponding clean audio sample. 
     """
 
-    def __init__(self, noise_data, train, subsample=None, quiet=False):
+    def __init__(self, noise_data, train, subsample=None, quiet=True):
         self.quiet = quiet
         self.noise_data = noise_data
         super().__init__(dataset_name=DATASET_NAME, quiet=quiet)
