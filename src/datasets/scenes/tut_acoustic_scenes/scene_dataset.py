@@ -45,7 +45,7 @@ class SceneDataset(S3BackedDataset):
 
     labels = CLASS_LABELS
 
-    def __init__(self, train, subsample=None, quiet=False):
+    def __init__(self, train, subsample=None, quiet=True):
         """
         Load the dataset into memory so it can be used for training.
         """
