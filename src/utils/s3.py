@@ -10,7 +10,7 @@ def fetch_data(bucket_dir, target_dir, quiet=False):
     """
     quiet_flag = "--quiet" if quiet else ""
     s3_key = f"s3://{DATA_S3_BUCKET}/{bucket_dir}"
-    cmd = f"aws s3 cp {quiet_flag} --recursive --quiet {s3_key} {target_dir}"
+    cmd = f"aws s3 cp {quiet_flag} --recursive {s3_key} {target_dir}"
     subprocess.run(args=[cmd], shell=True, check=True)
 
 
@@ -20,7 +20,7 @@ def upload_data(source_dir, bucket_dir, quiet=False):
     """
     quiet_flag = "--quiet" if quiet else ""
     s3_key = f"s3://{DATA_S3_BUCKET}/{bucket_dir}"
-    cmd = f"aws s3 cp {quiet_flag} --recursive --quiet {source_dir} {s3_key}"
+    cmd = f"aws s3 cp {quiet_flag} --recursive {source_dir} {s3_key}"
     subprocess.run(args=[cmd], shell=True, check=True)
 
 
