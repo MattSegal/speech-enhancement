@@ -61,8 +61,8 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     )
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
     trainer.register_loss_fn(get_feature_loss)
-    trainer.register_metric_fn(get_feature_loss_metric, "Loss")
-    trainer.register_metric_fn(get_mse_metric, "Feature Loss")
+    trainer.register_metric_fn(get_mse_metric, "Loss")
+    trainer.register_metric_fn(get_feature_loss_metric, "Feature Loss")
     trainer.input_shape = [2 ** 15]
     trainer.target_shape = [2 ** 15]
     trainer.output_shape = [2 ** 15]
