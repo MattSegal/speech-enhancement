@@ -50,7 +50,7 @@ def swarm(num_workers):
     """
     Kicks off a swarm of workers in Buildkite, for hyperparam tuning.
     """
-    buildkite.swarm(num_workers)
+    buildkite.swarm(int(num_workers))
 
 
 @click.command()
