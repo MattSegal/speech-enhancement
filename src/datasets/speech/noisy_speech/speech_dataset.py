@@ -30,7 +30,9 @@ class NoisySpeechDataset(S3BackedDataset):
 
         self.clean_data = []
         self.clean_folder = os.path.join(self.data_path, f"{dataset_label}_set_clean")
-        self.wav_filenames = self.find_wav_filenames(self.clean_folder, subsample=subsample)
+        self.wav_filenames = self.find_wav_filenames(
+            self.clean_folder, subsample=subsample
+        )
         self.load_and_trim_data(self.wav_filenames, self.clean_folder, self.clean_data)
         if not quiet:
             print("Loading noisy data...")

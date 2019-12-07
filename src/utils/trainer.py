@@ -55,7 +55,10 @@ class Trainer:
 
     def load_optimizer(self, net, learning_rate, adam_betas, weight_decay):
         return optim.AdamW(
-            net.parameters(), lr=learning_rate, betas=adam_betas, weight_decay=weight_decay
+            net.parameters(),
+            lr=learning_rate,
+            betas=adam_betas,
+            weight_decay=weight_decay,
         )
 
     def register_loss_fn(self, fn, weight=1):
@@ -73,7 +76,9 @@ class Trainer:
             torch.cuda.empty_cache()
 
             # Save checkpoint periodically.
-            is_checkpoint_epoch = self.checkpoint_epochs and epoch % self.checkpoint_epochs == 0
+            is_checkpoint_epoch = (
+                self.checkpoint_epochs and epoch % self.checkpoint_epochs == 0
+            )
             if self.checkpoint_name and is_checkpoint_epoch:
                 checkpoint.save(net, self.checkpoint_name, name=self.wandb_name)
 
