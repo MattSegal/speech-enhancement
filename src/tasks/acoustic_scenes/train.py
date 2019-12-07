@@ -18,8 +18,20 @@ CHECKPOINT_NAME = "scene-net"
 # Training hyperparams
 import random
 
-LEARNING_RATE = 10 ** (-10 * random.uniform(0.3, 0.7))
-WEIGHT_DECAY = 10 ** (-10 * random.uniform(0.2, 0.7))
+
+def from_exp(val):
+    return 10 ** (-10 * val)
+
+
+def to_exp(log_val):
+    return math.log(val, 10) / -10
+
+
+lr_exp = random.uniform(0.3, 0.6)
+wd_exp = random.uniform(lr_exp, 0.8)
+
+LEARNING_RATE = from_exp(lr_exp)
+WEIGHT_DECAY = from_exp(wd_exp)
 ADAM_BETAS = (random.triangular(0.4, 0.95, 0.8), random.triangular(0.8, 0.999, 0.95))
 BATCH_SIZE = random.choice([2 ** n for n in range(3, 8)])
 
