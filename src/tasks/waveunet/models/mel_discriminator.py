@@ -31,7 +31,23 @@ class MelDiscriminatorNet(nn.Module):
         self.discriminator = nn.Sequential(*layers)
 
     def forward(self, input_t):
+        batch_size = input_t.shape[0]
+        input_t = input_t.view(batch_size, 1, -1)
         return self.discriminator(input_t)
+
+    def freeze(self):
+        self._set_requires_grad(False)
+
+    def unfreeze(self):
+        self._set_requires_grad(True)
+
+    def _set_requires_grad(self, val):
+        for param in self.parameters():
+            param.requires_grad = val
+
+        for layer in self.discriminator:
+            for param in layer.parameters():
+                param.requires_grad = val
 
 
 def conv1d(in_channels, out_channels, **kwargs):

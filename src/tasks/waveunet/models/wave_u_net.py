@@ -40,6 +40,30 @@ class WaveUNet(nn.Module):
         # Extra dimension for input
         self.output = ConvLayer(NUM_C + 1, 1, kernel=1, nonlinearity=nn.Tanh)
 
+    def freeze(self):
+        self._set_requires_grad(False)
+
+    def unfreeze(self):
+        self._set_requires_grad(True)
+
+    def _set_requires_grad(self, val):
+        for param in self.parameters():
+            param.requires_grad = val
+
+        for param in self.middle.parameters():
+            param.requires_grad = val
+
+        for param in self.output.parameters():
+            param.requires_grad = val
+
+        for layer in self.encoders:
+            for param in layer.parameters():
+                param.requires_grad = val
+
+        for layer in self.decoders:
+            for param in layer.parameters():
+                param.requires_grad = val
+
     def forward(self, input_t):
         batch_size = input_t.shape[0]
         # Encoding
