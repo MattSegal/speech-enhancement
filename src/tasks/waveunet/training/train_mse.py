@@ -30,7 +30,7 @@ mse = nn.MSELoss()
 
 
 def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
-    trainer = Trainer(num_epochs, wandb_name)
+    trainer = Trainer(use_cuda, wandb_name)
     trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
     trainer.setup_wandb(WANDB_PROJECT, wandb_name)
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
@@ -41,18 +41,12 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     trainer.output_shape = [2 ** 15]
     net = trainer.load_net(WaveUNet)
     optimizer = trainer.load_optimizer(
-        net,
-        learning_rate=LEARNING_RATE,
-        adam_betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY,
+        net, learning_rate=LEARNING_RATE, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
     # Do a fine tuning run with 1/10th learning rate for 1/3rd epochs.
     optimizer = trainer.load_optimizer(
-        net,
-        learning_rate=LEARNING_RATE / 10,
-        adam_betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY / 10,
+        net, learning_rate=LEARNING_RATE / 10, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY / 10
     )
     num_epochs = num_epochs // 3
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)

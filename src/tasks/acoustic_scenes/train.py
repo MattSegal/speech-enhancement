@@ -16,16 +16,20 @@ WANDB_PROJECT = "chime-scene-net"
 CHECKPOINT_NAME = "scene-net"
 
 # Training hyperparams
-LEARNING_RATE = 1e-4
-ADAM_BETAS = (0.9, 0.999)
-WEIGHT_DECAY = 1e-2
+import random
+
+LEARNING_RATE = 10 ** (-10 * random.uniform(0, 0.7))
+WEIGHT_DECAY = 10 ** (-10 * random.uniform(0, 0.7))
+ADAM_BETAS = (random.triangular(0.4, 0.95, 0.8), random.triangular(0.8, 0.999, 0.95))
+BATCH_SIZE = random.choice([2 ** n for n in range(3, 8)])
 
 
 cross_entropy_loss = nn.CrossEntropyLoss()
 
 
 def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
-    trainer = Trainer(num_epochs, wandb_name)
+    batch_size = BATCH_SIZE
+    trainer = Trainer(use_cuda, wandb_name)
     trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
     trainer.setup_wandb(
         WANDB_PROJECT,
@@ -36,7 +40,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
             "Adam Betas": ADAM_BETAS,
             "Learning Rate": LEARNING_RATE,
             "Weight Decay": WEIGHT_DECAY,
-            "Fine Tuning": True,
+            "Fine Tuning": False,
         },
     )
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
@@ -45,19 +49,13 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     trainer.input_shape = [32767]
     net = trainer.load_net(SceneNet)
     optimizer = trainer.load_optimizer(
-        net,
-        learning_rate=LEARNING_RATE,
-        adam_betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY,
+        net, learning_rate=LEARNING_RATE, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
 
     # Do a fine tuning run with 1/10th learning rate for 1/3rd epochs.
     optimizer = trainer.load_optimizer(
-        net,
-        learning_rate=LEARNING_RATE / 10,
-        adam_betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY / 10,
+        net, learning_rate=LEARNING_RATE / 10, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY / 10
     )
     num_epochs = num_epochs // 3
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)

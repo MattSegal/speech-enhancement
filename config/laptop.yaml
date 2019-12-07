@@ -1,6 +1,6 @@
-task: waveunet_train_mse
+task: scene_net_train
 checkpoint_epochs: null
 cuda: false
 epochs: 5
-subsample: 1
+subsample: 512
 batch_size: 1

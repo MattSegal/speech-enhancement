@@ -1,3 +1,4 @@
+import pprint as pprint
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -11,9 +12,7 @@ from src.utils.log import log_training_info
 
 
 class Trainer:
-    def __init__(
-        self, use_cuda, wandb_name,
-    ):
+    def __init__(self, use_cuda, wandb_name):
         # Training
         self.use_cuda = use_cuda
         # Checkpointing
@@ -33,6 +32,8 @@ class Trainer:
         return net_class(**kwargs).cuda() if self.use_cuda else net_class(**kwargs).cpu()
 
     def setup_wandb(self, wandb_project, wandb_name, config={}):
+        print("Using training config:")
+        pprint.pprint(config)
         self.wandb_name = wandb_name
         self.use_wandb = bool(wandb_name)
         if self.use_wandb:
@@ -54,10 +55,7 @@ class Trainer:
 
     def load_optimizer(self, net, learning_rate, adam_betas, weight_decay):
         return optim.AdamW(
-            net.parameters(),
-            lr=learning_rate,
-            betas=adam_betas,
-            weight_decay=weight_decay,
+            net.parameters(), lr=learning_rate, betas=adam_betas, weight_decay=weight_decay
         )
 
     def register_loss_fn(self, fn, weight=1):
@@ -75,9 +73,7 @@ class Trainer:
             torch.cuda.empty_cache()
 
             # Save checkpoint periodically.
-            is_checkpoint_epoch = (
-                self.checkpoint_epochs and epoch % self.checkpoint_epochs == 0
-            )
+            is_checkpoint_epoch = self.checkpoint_epochs and epoch % self.checkpoint_epochs == 0
             if self.checkpoint_name and is_checkpoint_epoch:
                 checkpoint.save(net, self.checkpoint_name, name=self.wandb_name)
 
@@ -143,12 +139,10 @@ class Trainer:
                 training_info[f"Training {name}"] = train_tracker.value
                 training_info[f"Validation {name}"] = test_tracker.value
 
-            log_training_info(
-                training_info, use_wandb=self.use_wandb,
-            )
+            log_training_info(training_info, use_wandb=self.use_wandb)
 
         # Save final model checkpoint
         if self.checkpoint_name:
             checkpoint.save(
-                net, self.checkpoint_name, name=self.wandb_name, use_wandb=self.use_wandb,
+                net, self.checkpoint_name, name=self.wandb_name, use_wandb=self.use_wandb
             )

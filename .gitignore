@@ -9,3 +9,4 @@ wandb/
 checkpoints/
 .ec2-info.json
 .ec2-ip.sh
+secrets.py

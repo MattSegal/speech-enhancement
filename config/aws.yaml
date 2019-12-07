@@ -1,5 +1,5 @@
 task: scene_net_train
 cuda: true
-checkpoint_epochs: 100
-epochs: 400
+checkpoint_epochs: null
+epochs: 300
 batch_size: 128

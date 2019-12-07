@@ -4,6 +4,7 @@ import click
 
 import aws
 import remote
+import buildkite
 
 
 @click.group()
@@ -41,6 +42,15 @@ def boot(job_id):
     Start a job but don't stop it
     """
     aws.run_job(job_id)
+
+
+@click.command()
+@click.argument("num_workers")
+def swarm(num_workers):
+    """
+    Kicks off a swarm of workers in Buildkite, for hyperparam tuning.
+    """
+    buildkite.swarm(num_workers)
 
 
 @click.command()
@@ -88,6 +98,7 @@ def cleanup():
 
 cli.add_command(cleanup)
 cli.add_command(status)
+cli.add_command(swarm)
 cli.add_command(ssh)
 cli.add_command(start)
 cli.add_command(stop)
