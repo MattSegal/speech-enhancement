@@ -21,7 +21,7 @@ CHECKPOINT_NAME = "wave-u-net"
 LOSS_NET_CHECKPOINT = "scene-net-scene-retrain-2-1575380038.full.ckpt"
 
 # Training hyperparams
-LEARNING_RATE = 4e-4
+LEARNING_RATE = 1e-3
 ADAM_BETAS = (0.9, 0.99)
 WEIGHT_DECAY = 1e-4
 
