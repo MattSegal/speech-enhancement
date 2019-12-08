@@ -1,5 +1,5 @@
-task: waveunet_train_gan
+task: waveunet_train_fl
 cuda: true
 checkpoint_epochs: null
 batch_size: 32
-epochs: 12
+epochs: 24
