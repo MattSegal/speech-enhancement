@@ -43,6 +43,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
             "Adam Betas": ADAM_BETAS,
             "Learning Rate": LEARNING_RATE,
             "Disc Learning Rate": DISC_LEARNING_RATE,
+            "Disc Weight": DISC_WEIGHT,
             "Weight Decay": WEIGHT_DECAY,
             "Fine Tuning": False,
         },
@@ -112,7 +113,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     trainer.loss_fns = []
     trainer.metric_fns = []
     trainer.register_loss_fn(get_mse_loss)
-    trainer.register_loss_fn(get_gen_loss)
+    trainer.register_loss_fn(get_gen_loss, weight=DISC_WEIGHT)
     trainer.register_metric_fn(get_mse_metric, "Loss")
     trainer.register_metric_fn(get_gen_metric, "Generator Loss")
     trainer.train(gen_net, num_epochs, gen_optimizer, train_loader, test_loader)
