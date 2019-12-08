@@ -15,35 +15,45 @@ from src.utils.checkpoint import load as load_checkpoint
 
 from .dataset import SpeechEvaluationDataset
 
+USE_CUDA = True
 AUDIO_LENGTH = 2 ** 16  # ~1s of data at 16kHz
 RESULT_DIR = "data/evaluation_results"
 DATA_DIR = "data/speech_evaluation"
 TEMPLATE_PATH = "src/datasets/speech/speech_evaluation/template.html"
 SNIPPET_PATH = "src/datasets/speech/speech_evaluation/snippet.html"
 CHECKPOINTS = [
-    # {"name": "Untrained", "file": "wave-u-net-half-data-mse-1574067122.full.ckpt"},
-    {"name": "Half-trained", "file": "wave-u-net-half-data-mse-1574074898.full.ckpt"},
     {
-        "name": "More data U net MSE with 2s window",
-        "file": "wave-u-net-mse-libre-2s-audio-redux-1575128628.full.ckpt",
-    },
-    {
-        "name": "WaveUNet with MSE loss",
+        "name": "WaveUNet MSE",
         "file": "wave-u-net-mse-try-replicate-success-2-1575377123.full.ckpt",
     },
-    {"name": "U-net with MSE loss", "file": "wave-u-net-mse-onlyy-1573200273.full.ckpt"},
     {
-        "name": "U-net with feature loss",
-        "file": "wave-u-net-feature-loss-only-1573203595.full.ckpt",
+        "name": "WaveUNet Feature Loss",
+        "file": "wave-u-net-mse-try-replicate-success-2-1575375231.full.ckpt",
     },
+    {"name": "WaveUNet NoGAN", "file": "wave-u-net-gan-redux-1575707768.full.ckpt",},
+    # {"name": "Untrained", "file": "wave-u-net-half-data-mse-1574067122.full.ckpt"},
+    # {"name": "Half-trained", "file": "wave-u-net-half-data-mse-1574074898.full.ckpt"},
+    # {
+    #     "name": "More data U net MSE with 2s window",
+    #     "file": "wave-u-net-mse-libre-2s-audio-redux-1575128628.full.ckpt",
+    # },
+    # {
+    #     "name": "WaveUNet with MSE loss",
+    #     "file": "wave-u-net-mse-try-replicate-success-2-1575377123.full.ckpt",
+    # },
+    # {"name": "U-net with MSE loss", "file": "wave-u-net-mse-onlyy-1573200273.full.ckpt"},
+    # {
+    #     "name": "U-net with feature loss",
+    #     "file": "wave-u-net-feature-loss-only-1573203595.full.ckpt",
+    # },
     # {
     #     "name": "U-net with GAN, MSE, feature loss",
     #     "file": "wave-u-net-mse-gan-feature-losses-1573224098.full.ckpt",
     # },
-    {
-        "name": "U-net with GAN and feature loss",
-        "file": "wave-u-net-new-baseline-1573206080.full.ckpt",
-    },
+    # {
+    #     "name": "U-net with GAN and feature loss",
+    #     "file": "wave-u-net-new-baseline-1573206080.full.ckpt",
+    # },
 ]
 SAMPLES = [
     {"name": "Road noise", "slug": "road", "count": 4},
@@ -55,10 +65,10 @@ SAMPLES = [
     {"name": "Whine", "slug": "whine", "count": 1},
     {"name": "Music", "slug": "music", "count": 5},
     {"name": "Babbling speech", "slug": "babbling", "count": 3},
-    {"name": "High freq band removed", "slug": "high_band", "count": 4},
-    {"name": "Low freq band removed", "slug": "low_band", "count": 4},
-    {"name": "High and low freq bands removed", "slug": "both_band", "count": 4},
-    {"name": "Phone similator", "slug": "phone", "count": 4},
+    # {"name": "High freq band removed", "slug": "high_band", "count": 4},
+    # {"name": "Low freq band removed", "slug": "low_band", "count": 4},
+    # {"name": "High and low freq bands removed", "slug": "both_band", "count": 4},
+    # {"name": "Phone similator", "slug": "phone", "count": 4},
     {"name": "Podcast samples", "slug": "podcast", "count": 4},
     {"name": "Clean", "slug": "clean", "count": 3},
 ]
@@ -75,9 +85,12 @@ def evaluate(checkpoints, samples):
     for checkpoint in checkpoints:
         name = checkpoint["name"]
         print(f"\tLoading checkpoint {name}")
-        net = load_checkpoint(checkpoint["file"], use_cuda=False)
+        net = load_checkpoint(checkpoint["file"], use_cuda=USE_CUDA)
         net.eval()
         checkpoint["net"] = net
+
+    print("Loading evaluation data")
+    SpeechEvaluationDataset(quiet=False)
 
     snippets = []
     for sample in samples:
@@ -142,7 +155,11 @@ def save_audio_array(snippet, snippets, sample_id, name, arr):
 
 def get_prediction(net, input_arr):
     with torch.no_grad():
-        inputs = torch.tensor(input_arr).float().cpu()
+        inputs = (
+            torch.tensor(input_arr).float().cuda()
+            if USE_CUDA
+            else torch.tensor(input_arr).float().cpu()
+        )
         inputs = inputs.view(1, 1, -1)
         outputs = net(inputs)
         outputs = outputs.squeeze(dim=0).squeeze(dim=0)
