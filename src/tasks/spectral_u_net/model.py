@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn.utils import weight_norm
 
 NUM_C = 24  # Factor which determines the number of channels
-NUM_ENCODER_LAYERS = 7
+NUM_ENCODER_LAYERS = 8
 
 
 class SpectralUNet(nn.Module):

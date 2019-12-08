@@ -28,32 +28,12 @@ CHECKPOINTS = [
     },
     {
         "name": "WaveUNet Feature Loss",
-        "file": "wave-u-net-mse-try-replicate-success-2-1575375231.full.ckpt",
+        "file": "wave-u-net-fl-up-learning-rate-1575794210.full.ckpt",
     },
-    {"name": "WaveUNet NoGAN", "file": "wave-u-net-gan-redux-1575707768.full.ckpt",},
-    # {"name": "Untrained", "file": "wave-u-net-half-data-mse-1574067122.full.ckpt"},
-    # {"name": "Half-trained", "file": "wave-u-net-half-data-mse-1574074898.full.ckpt"},
-    # {
-    #     "name": "More data U net MSE with 2s window",
-    #     "file": "wave-u-net-mse-libre-2s-audio-redux-1575128628.full.ckpt",
-    # },
-    # {
-    #     "name": "WaveUNet with MSE loss",
-    #     "file": "wave-u-net-mse-try-replicate-success-2-1575377123.full.ckpt",
-    # },
-    # {"name": "U-net with MSE loss", "file": "wave-u-net-mse-onlyy-1573200273.full.ckpt"},
-    # {
-    #     "name": "U-net with feature loss",
-    #     "file": "wave-u-net-feature-loss-only-1573203595.full.ckpt",
-    # },
-    # {
-    #     "name": "U-net with GAN, MSE, feature loss",
-    #     "file": "wave-u-net-mse-gan-feature-losses-1573224098.full.ckpt",
-    # },
-    # {
-    #     "name": "U-net with GAN and feature loss",
-    #     "file": "wave-u-net-new-baseline-1573206080.full.ckpt",
-    # },
+    {
+        "name": "WaveUNet NoGAN",
+        "file": "wave-u-net-no-gan-lower-weight-1575794807.full.ckpt",
+    },
 ]
 SAMPLES = [
     {"name": "Road noise", "slug": "road", "count": 4},

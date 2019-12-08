@@ -5,6 +5,8 @@ from src.utils import spectral
 
 from .speech_dataset import NoisySpeechDataset
 
+MAX_AUDIO_LENGTH = 2 ** 16  # ~4s of data at 16kHz
+
 
 class NoisySpectralSpeechDataset(NoisySpeechDataset):
     """

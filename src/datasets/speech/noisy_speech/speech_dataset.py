@@ -10,7 +10,7 @@ from src.utils import s3
 from src.datasets.s3dataset import S3BackedDataset
 
 DATASET_NAME = "noisy_speech"
-MAX_AUDIO_LENGTH = 2 ** 15  # ~1s of data at 16kHz
+MAX_AUDIO_LENGTH = 2 ** 15  # ~2s of data at 16kHz
 
 
 class NoisySpeechDataset(S3BackedDataset):
@@ -19,6 +19,8 @@ class NoisySpeechDataset(S3BackedDataset):
     The input is a 1D tensor of floats, representing a complete noisy audio sample.
     The target is a 1D tensor of floats, representing a corresponding clean audio sample. 
     """
+
+    MAX_AUDIO_LENGTH = MAX_AUDIO_LENGTH
 
     def __init__(self, train, subsample=None, quiet=True):
         self.quiet = quiet
@@ -51,12 +53,12 @@ class NoisySpeechDataset(S3BackedDataset):
 
         # Ensure all sound samples are the same length
         for idx, wav_arr in enumerate(data):
-            if len(wav_arr) > MAX_AUDIO_LENGTH:
+            if len(wav_arr) > self.MAX_AUDIO_LENGTH:
                 # Shorten audio sample
-                data[idx] = subsample_chunk(wav_arr, MAX_AUDIO_LENGTH)
-            elif len(wav_arr) < MAX_AUDIO_LENGTH:
+                data[idx] = subsample_chunk(wav_arr, self.MAX_AUDIO_LENGTH)
+            elif len(wav_arr) < self.MAX_AUDIO_LENGTH:
                 # Pad sample with zeros
-                data[idx] = pad_chunk(wav_arr, MAX_AUDIO_LENGTH)
+                data[idx] = pad_chunk(wav_arr, self.MAX_AUDIO_LENGTH)
 
     def __len__(self):
         """

@@ -27,5 +27,7 @@ def spec_to_audio(spectral_frames):
     """
     mag, phase = spectral_frames
     spectral_frames = mag + 1j * phase
-    _, audio_arr = signal.istft(res_rec, fs=SAMPLING_RATE, nperseg=SAMPLES_PER_SEGMENT)
+    _, audio_arr = signal.istft(
+        spectral_frames, fs=SAMPLING_RATE, nperseg=SAMPLES_PER_SEGMENT
+    )
     return audio_arr
