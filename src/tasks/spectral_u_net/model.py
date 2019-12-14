@@ -10,7 +10,6 @@ class SpectralUNet(nn.Module):
     def __init__(self):
         super().__init__()
         # Construct encoders
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.encoders = nn.ModuleList()
         layer = ConvLayer(2, NUM_C, kernel=15)
         self.encoders.append(layer)
@@ -45,7 +44,7 @@ class SpectralUNet(nn.Module):
             acts = encoder(acts)
             skip_connections.append(acts)
             # Decimate activations
-            acts = self.pool(acts)
+            acts = acts[:, :, ::2, ::2]
 
         # (b, 168, 2, 1)
         acts = self.middle(acts)
