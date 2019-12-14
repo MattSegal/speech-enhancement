@@ -11,7 +11,7 @@ class SpectralUNet(nn.Module):
         super().__init__()
         # Construct encoders
         self.encoders = nn.ModuleList()
-        layer = ConvLayer(2, NUM_C, kernel=15)
+        layer = ConvLayer(1, NUM_C, kernel=15)
         self.encoders.append(layer)
         for i in range(1, NUM_ENCODER_LAYERS):
             in_channels = i * NUM_C
@@ -32,12 +32,14 @@ class SpectralUNet(nn.Module):
             layer = ConvLayer(in_channels, out_channels, kernel=5)
             self.decoders.append(layer)
 
-        self.final_conv = ConvLayer(NUM_C + 2, 2, kernel=1, nonlinearity=nn.Tanh)
+        self.final_conv = ConvLayer(NUM_C + 1, 1, kernel=1, nonlinearity=nn.Tanh)
 
     def forward(self, input_t):
         # Encoding
         # (b, 2, 256, 128)
-        acts = input_t
+        mag = input_t[:, 0, :, :].view(-1, 1, 256, 128)
+        phase = input_t[:, 1, :, :].view(-1, 1, 256, 128)
+        acts = mag
         skip_connections = []
         for idx, encoder in enumerate(self.encoders):
             acts = encoder(acts)
@@ -61,11 +63,12 @@ class SpectralUNet(nn.Module):
             acts = decoder(acts)
 
         # (b, 24, 256, 128)
-        acts = torch.cat((acts, input_t), dim=1)
+        acts = torch.cat((acts, mag), dim=1)
         # (b, 26, 256, 128)
         mask_t = self.final_conv(acts)
         # (b, 2, 256, 128)
-        output_t = mask_t * input_t
+        output_mag_t = mask_t * mag
+        output_t = torch.cat((output_mag_t, phase), dim=1)
         return output_t
 
 
