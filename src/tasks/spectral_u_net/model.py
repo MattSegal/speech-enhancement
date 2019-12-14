@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.nn.utils import weight_norm
 
+NUM_INPUT_C = 2
 NUM_C = 24  # Factor which determines the number of channels
 NUM_ENCODER_LAYERS = 7
 
@@ -11,7 +12,7 @@ class SpectralUNet(nn.Module):
         super().__init__()
         # Construct encoders
         self.encoders = nn.ModuleList()
-        layer = ConvLayer(1, NUM_C, kernel=15)
+        layer = ConvLayer(NUM_INPUT_C, NUM_C, kernel=15)
         self.encoders.append(layer)
         for i in range(1, NUM_ENCODER_LAYERS):
             in_channels = i * NUM_C
@@ -32,7 +33,9 @@ class SpectralUNet(nn.Module):
             layer = ConvLayer(in_channels, out_channels, kernel=5)
             self.decoders.append(layer)
 
-        self.final_conv = ConvLayer(NUM_C + 1, 1, kernel=1, nonlinearity=nn.Tanh)
+        self.final_conv = ConvLayer(
+            NUM_C + NUM_INPUT_C, NUM_INPUT_C, kernel=1, nonlinearity=nn.Tanh
+        )
 
     def forward(self, input_t):
         # Encoding

@@ -3,7 +3,6 @@ torchaudio
 torch
 numpy 
 scipy
-librosa
 
 # Image processing
 Pillow
@@ -11,10 +10,6 @@ Pillow
 # Training
 wandb
 tqdm 
-
-# Exploration
-jupyter
-matplotlib 
 
 # Utiltiies
 pyyaml
