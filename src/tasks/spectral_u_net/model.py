@@ -32,8 +32,7 @@ class SpectralUNet(nn.Module):
             layer = ConvLayer(in_channels, out_channels, kernel=5)
             self.decoders.append(layer)
 
-        # Extra dimension for input
-        self.output = ConvLayer(NUM_C + 2, 2, kernel=1, nonlinearity=nn.Tanh)
+        self.final_conv = ConvLayer(NUM_C + 2, 2, kernel=1, nonlinearity=nn.Tanh)
 
     def forward(self, input_t):
         # Encoding
@@ -64,8 +63,9 @@ class SpectralUNet(nn.Module):
         # (b, 24, 256, 128)
         acts = torch.cat((acts, input_t), dim=1)
         # (b, 26, 256, 128)
-        output_t = self.output(acts)
+        mask_t = self.final_conv(acts)
         # (b, 2, 256, 128)
+        output_t = mask_t * input_t
         return output_t
 
 
