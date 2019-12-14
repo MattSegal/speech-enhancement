@@ -1,4 +1,4 @@
-task: waveunet_train_fl
+task: spectral_unet_train
 cuda: true
 checkpoint_epochs: null
 epochs: 8

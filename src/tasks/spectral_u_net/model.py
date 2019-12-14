@@ -3,13 +3,14 @@ from torch import nn
 from torch.nn.utils import weight_norm
 
 NUM_C = 24  # Factor which determines the number of channels
-NUM_ENCODER_LAYERS = 8
+NUM_ENCODER_LAYERS = 7
 
 
 class SpectralUNet(nn.Module):
     def __init__(self):
         super().__init__()
         # Construct encoders
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.encoders = nn.ModuleList()
         layer = ConvLayer(2, NUM_C, kernel=15)
         self.encoders.append(layer)
@@ -44,7 +45,7 @@ class SpectralUNet(nn.Module):
             acts = encoder(acts)
             skip_connections.append(acts)
             # Decimate activations
-            acts = acts[:, :, ::2, ::2]
+            acts = self.pool(acts)
 
         # (b, 168, 2, 1)
         acts = self.middle(acts)
