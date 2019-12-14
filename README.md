@@ -4,10 +4,10 @@ Tinkering with speech enhancement models.
 
 Borrowed code, models and techniques from:
 
-- Improved Speech Enhancement with the Wave-U-Net ([arXiv](https://arxiv.org/abs/1811.11307)
-- Wave-U-Net: a multi-scale neural network for end-to-end audio source separation ([arXiv](https://arxiv.org/pdf/1806.03185.pdf)
-- Speech Denoising with Deep Feature Losses ([arXiv](https://arxiv.org/abs/1806.10522), [sound examples](https://ccrma.stanford.edu/~francois/SpeechDenoisingWithDeepFeatureLosses/)), [GitHub](https://github.com/francoisgermain/SpeechDenoisingWithDeepFeatureLosses)
-- MelGAN: Generative Adversarial Networks for Conditional Waveform Synthesis ([arXiv](https://arxiv.org/abs/1910.06711), [sound examples](https://melgan-neurips.github.io/)), [GitHub](https://github.com/seungwonpark/melgan)
+- Improved Speech Enhancement with the Wave-U-Net (([arXiv](https://arxiv.org/abs/1811.11307))
+- Wave-U-Net: a multi-scale neural network for end-to-end audio source separation ([arXiv](https://arxiv.org/pdf/1806.03185.pdf))
+- Speech Denoising with Deep Feature Losses ([arXiv](https://arxiv.org/abs/1806.10522), [sound examples](https://ccrma.stanford.edu/~francois/SpeechDenoisingWithDeepFeatureLosses/), [GitHub](https://github.com/francoisgermain/SpeechDenoisingWithDeepFeatureLosses))
+- MelGAN: Generative Adversarial Networks for Conditional Waveform Synthesis ([arXiv](https://arxiv.org/abs/1910.06711), [sound examples](https://melgan-neurips.github.io/), [GitHub](https://github.com/seungwonpark/melgan))
 
 ### Datasets
 
