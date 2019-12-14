@@ -3,6 +3,7 @@ torchaudio
 torch
 numpy 
 scipy
+librosa
 
 # Image processing
 Pillow
