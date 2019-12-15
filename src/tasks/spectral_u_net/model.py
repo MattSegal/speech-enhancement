@@ -70,9 +70,9 @@ class SpectralUNet(nn.Module):
         # (b, 24, 256, 128)
         acts = torch.cat((acts, input_t), dim=1)
         # (b, 26, 256, 128)
-        output_t = self.final_conv(acts)
+        mask_t = self.final_conv(acts)
         # (b, 2, 256, 128)
-        return output_t
+        return input_t * mask_t
 
 
 class ConvLayer(nn.Module):
