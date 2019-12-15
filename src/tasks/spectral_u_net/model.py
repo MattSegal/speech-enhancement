@@ -36,15 +36,15 @@ class SpectralUNet(nn.Module):
             self.decoders.append(layer)
 
         self.final_conv = ConvLayer(
-            NUM_CHAN + NUM_INPUT_CHAN, NUM_INPUT_CHAN, kernel=1, nonlinearity=nn.Tanh
+            NUM_CHAN + NUM_INPUT_CHAN, NUM_INPUT_CHAN, kernel=1, nonlinearity=nn.Sigmoid
         )
 
     def forward(self, input_t):
-        preprocessed_t = spectral.preprocess_input_spec(input_t)
+        pre_t = spectral.preprocess_input_spec(input_t)
 
         # Encoding
         # (b, 2, 256, 128)
-        acts = preprocessed_t
+        acts = pre_t
         skip_connections = []
         for idx, encoder in enumerate(self.encoders):
             acts = encoder(acts)
@@ -68,7 +68,7 @@ class SpectralUNet(nn.Module):
             acts = decoder(acts)
 
         # (b, 24, 256, 128)
-        acts = torch.cat((acts, input_t), dim=1)
+        acts = torch.cat((acts, pre_t), dim=1)
         # (b, 26, 256, 128)
         mask_t = self.final_conv(acts)
         # (b, 2, 256, 128)
