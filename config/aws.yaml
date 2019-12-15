@@ -1,5 +1,7 @@
 task: spectral_unet_train
 cuda: true
-checkpoint_epochs: null
-batch_size: 16
 epochs: 12
+batch_size: 16
+subsample: null
+checkpoint_epochs: null
+wandb_name: null

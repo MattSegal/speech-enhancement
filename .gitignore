@@ -6,6 +6,7 @@ __pycache__/
 wandb.sh
 wandb/
 .ipynb_checkpoints/
+.pytest_cache/
 checkpoints/
 .ec2-info.json
 .ec2-ip.sh

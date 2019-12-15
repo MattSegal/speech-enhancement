@@ -15,3 +15,7 @@ tqdm
 pyyaml
 awscli
 requests
+cerberus
+
+# Testing
+pytest

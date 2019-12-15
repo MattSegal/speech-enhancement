@@ -2,10 +2,21 @@ import os
 import yaml
 
 import click
+from cerberus import Validator
 
 from src import tasks
 
 ENV_CHOICES = [f.split(".")[0] for f in os.listdir("config")]
+CONFIG_SCHEMA = {
+    "task": {"type": "string", "required": True, "nullable": False},
+    "cuda": {"type": "boolean", "required": True, "nullable": False},
+    "epochs": {"type": "integer", "required": True, "nullable": False},
+    "batch_size": {"type": "integer", "required": True, "nullable": False},
+    "subsample": {"type": "integer", "required": True, "nullable": True},
+    "checkpoint_epochs": {"type": "integer", "required": True, "nullable": True},
+    "wandb_name": {"type": "string", "required": True, "nullable": True},
+}
+validator = Validator(CONFIG_SCHEMA)
 
 
 @click.command()
@@ -19,6 +30,9 @@ def train_cli(env, branch):
     with open(f"config/{env}.yaml", "r") as f:
         config = yaml.load(f)
 
+    is_valid = validator.validate(config)
+    assert is_valid, validator.errors
+
     job_name = branch.replace("train/", "")
     if job_name:
         old_name = config.get("wandb_name")
@@ -30,9 +44,9 @@ def train_cli(env, branch):
         num_epochs=config["epochs"],
         use_cuda=config["cuda"],
         batch_size=config["batch_size"],
-        wandb_name=config.get("wandb_name"),
-        subsample=config.get("subsample"),
-        checkpoint_epochs=config.get("checkpoint_epochs", 6),
+        wandb_name=config["wandb_name"],
+        subsample=config["subsample"],
+        checkpoint_epochs=config["checkpoint_epochs"],
     )
 
 
