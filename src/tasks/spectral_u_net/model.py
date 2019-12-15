@@ -72,7 +72,7 @@ class SpectralUNet(nn.Module):
         # (b, 26, 256, 128)
         mask_t = self.final_conv(acts)
         # (b, 2, 256, 128)
-        return mask_t
+        return input_t * mask_t
 
 
 class ConvLayer(nn.Module):
