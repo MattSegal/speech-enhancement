@@ -2,6 +2,8 @@ import torch
 from torch import nn
 from torch.nn.utils import weight_norm
 
+from src.utils import spectral
+
 NUM_ENCODER_LAYERS = 7
 NUM_CHAN = 24  # Factor which determines the number of channels
 NUM_INPUT_CHAN = 2
@@ -38,9 +40,11 @@ class SpectralUNet(nn.Module):
         )
 
     def forward(self, input_t):
+        preprocessed_t = spectral.preprocess_input_spec(input_t)
+
         # Encoding
         # (b, 2, 256, 128)
-        acts = input_t
+        acts = preprocessed_t
         skip_connections = []
         for idx, encoder in enumerate(self.encoders):
             acts = encoder(acts)

@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 from scipy import signal
 
@@ -36,6 +37,24 @@ def spec_to_audio(spectral_frames, window_ms=WIN_MS, hop_ms=HOP_MS):
         spectral_frames, fs=SAMPLING_RATE, nperseg=num_segment, noverlap=num_overlap,
     )
     return audio_arr
+
+
+def preprocess_input_spec(input_t):
+    return normalise(logify(input_t))
+
+
+def logify(arr):
+    log_arr = torch.zeros(arr.shape)
+    log_arr[arr > 0] = torch.log(arr[arr > 0])
+    log_arr[arr < 0] = -1 * torch.log(-1 * arr[arr < 0])
+    return log_arr
+
+
+def normalise(arr):
+    mean = arr.mean()
+    centred_arr = arr - mean
+    arr_max = np.abs(centred_arr).max()
+    return centred_arr / arr_max
 
 
 def ms_to_steps(ms):
