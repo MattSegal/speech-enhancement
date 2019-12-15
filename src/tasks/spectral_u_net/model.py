@@ -36,7 +36,7 @@ class SpectralUNet(nn.Module):
             self.decoders.append(layer)
 
         self.final_conv = ConvLayer(
-            NUM_CHAN + NUM_INPUT_CHAN, NUM_INPUT_CHAN, kernel=1, nonlinearity=nn.Sigmoid
+            NUM_CHAN + NUM_INPUT_CHAN, NUM_INPUT_CHAN, kernel=1, nonlinearity=nn.Tanh
         )
 
     def forward(self, input_t):
@@ -72,7 +72,7 @@ class SpectralUNet(nn.Module):
         # (b, 26, 256, 128)
         mask_t = self.final_conv(acts)
         # (b, 2, 256, 128)
-        return input_t * mask_t
+        return mask_t
 
 
 class ConvLayer(nn.Module):
