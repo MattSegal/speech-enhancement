@@ -14,7 +14,6 @@ CONFIG_SCHEMA = {
     "batch_size": {"type": "integer", "required": True, "nullable": False},
     "subsample": {"type": "integer", "required": True, "nullable": True},
     "checkpoint_epochs": {"type": "integer", "required": True, "nullable": True},
-    "wandb_name": {"type": "string", "required": True, "nullable": True},
 }
 validator = Validator(CONFIG_SCHEMA)
 
@@ -33,18 +32,17 @@ def train_cli(env, branch):
     is_valid = validator.validate(config)
     assert is_valid, validator.errors
 
-    job_name = branch.replace("train/", "")
-    if job_name:
-        old_name = config.get("wandb_name")
-        print(f'Overriding W&B name "{old_name}" with "{job_name}"')
-        config["wandb_name"] = job_name
+    wandb_name = None
+    if branch.startswith("train/"):
+        wandb_name = branch.replace("train/", "")
+        print(f'Using W&B name "{wandb_name}"')
 
     train = getattr(tasks, config["task"])
     train(
         num_epochs=config["epochs"],
         use_cuda=config["cuda"],
         batch_size=config["batch_size"],
-        wandb_name=config["wandb_name"],
+        wandb_name=wandb_name,
         subsample=config["subsample"],
         checkpoint_epochs=config["checkpoint_epochs"],
     )

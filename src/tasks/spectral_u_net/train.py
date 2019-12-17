@@ -13,7 +13,7 @@ WANDB_PROJECT = "spectral-u-net"
 CHECKPOINT_NAME = "spectral-u-net"
 
 # Training hyperparams
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 3e-4
 ADAM_BETAS = (0.9, 0.99)
 WEIGHT_DECAY = 1e-6
 
@@ -32,7 +32,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
             "Adam Betas": ADAM_BETAS,
             "Learning Rate": LEARNING_RATE,
             "Weight Decay": WEIGHT_DECAY,
-            "Fine Tuning": False,
+            "Fine Tuning": True,
         },
     )
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
@@ -45,6 +45,15 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     optimizer = trainer.load_optimizer(
         net, learning_rate=LEARNING_RATE, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
+    trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
+    # Do a fine tuning run with 1/10th learning rate for 1/3rd epochs.
+    optimizer = trainer.load_optimizer(
+        net,
+        learning_rate=LEARNING_RATE / 10,
+        adam_betas=ADAM_BETAS,
+        weight_decay=WEIGHT_DECAY / 10,
+    )
+    num_epochs = num_epochs // 3
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
 
 
