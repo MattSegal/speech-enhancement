@@ -20,6 +20,10 @@ class SpectralUNet(nn.Module):
             in_channels = i * NUM_CHAN
             out_channels = (i + 1) * NUM_CHAN
             layer = ConvLayer(in_channels, out_channels, kernel=15)
+            layer = nn.Sequential(
+                ConvLayer(in_channels, out_channels, kernel=15),
+                ConvLayer(out_channels, out_channels, kernel=1),
+            )
             self.encoders.append(layer)
 
         self.middle = ConvLayer(
