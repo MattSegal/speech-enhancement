@@ -23,7 +23,8 @@ class WaveUNet(nn.Module):
         for i in range(1, NUM_ENCODER_LAYERS):
             in_channels = i * NUM_C
             out_channels = (i + 1) * NUM_C
-            layer = ConvLayer(in_channels, out_channels, kernel=15)
+            kernels = []
+            layer = MultiKernelConvLayer(in_channels, out_channels, kernels)
             self.encoders.append(layer)
 
         self.middle = ConvLayer(12 * NUM_C, 13 * NUM_C, kernel=15)
@@ -98,6 +99,41 @@ class WaveUNet(nn.Module):
         # (batch, 1, 16384) (or 1, 3, 5, etc.)
         output_t = output_t.squeeze(dim=1)
         return output_t
+
+
+class MultiKernelConvLayer(nn.Module):
+    """
+    Multiple convolutions with nonlinear output
+    """
+
+    def __init__(self, in_channels, out_channels, kernels, nonlinearity=nn.PReLU):
+        super().__init__()
+        assert out_channels % 3 == 0, "Out channels must be divisible by 3"
+        assert len(kernels) == 3, "There must be 3 kernels"
+        self.nonlinearity = nonlinearity()
+        self.convs = nn.ModuleList()
+        for kernel in kernels:
+            conv = nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=out_channels / 3,
+                kernel_size=kernel,
+                padding=kernel // 2,  # Same padding
+                bias=True,
+            )
+            conv = weight_norm(conv)
+            nn.init.xavier_uniform_(conv.weight)
+            self.convs.append(conv)
+
+    def forward(self, input_t):
+        """
+        Compute output tensor from input tensor
+        """
+        acts = []
+        for conv in self.convs:
+            acts.append(conv(input_t))
+
+        acts = torch.cat(acts, dim=1)
+        return self.nonlinearity(acts)
 
 
 class ConvLayer(nn.Module):

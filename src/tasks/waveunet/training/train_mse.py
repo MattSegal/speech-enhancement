@@ -32,7 +32,18 @@ mse = nn.MSELoss()
 def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_epochs):
     trainer = Trainer(use_cuda, wandb_name)
     trainer.setup_checkpoints(CHECKPOINT_NAME, checkpoint_epochs)
-    trainer.setup_wandb(WANDB_PROJECT, wandb_name)
+    trainer.setup_wandb(
+        WANDB_PROJECT,
+        wandb_name,
+        config={
+            "Batch Size": batch_size,
+            "Epochs": num_epochs,
+            "Adam Betas": ADAM_BETAS,
+            "Learning Rate": LEARNING_RATE,
+            "Weight Decay": WEIGHT_DECAY,
+            "Fine Tuning": True,
+        },
+    )
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
     trainer.register_loss_fn(get_mse_loss)
     trainer.register_metric_fn(get_mse_metric, "Loss")

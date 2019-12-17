@@ -1,7 +1,7 @@
-task: spectral_unet_train
+task: waveunet_train_mse
 cuda: true
 epochs: 3
-batch_size: 16
-subsample: null
+batch_size: 2
+subsample: 32
 checkpoint_epochs: null
 wandb_name: null
