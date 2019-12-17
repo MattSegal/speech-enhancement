@@ -23,11 +23,19 @@ class WaveUNet(nn.Module):
         for i in range(1, NUM_ENCODER_LAYERS):
             in_channels = i * NUM_C
             out_channels = (i + 1) * NUM_C
-            kernels = []
+            if i < 6:
+                # Kernel length for 32k to 1024 samples
+                kernels = [45, 15, 5]
+            elif i < 9:
+                # Kernel length for 512 to 128 samples
+                kernels = [15, 5, 3]
+            else:
+                # Kernel length for 64 to 16 samples
+                kernels = [5, 3, 1]
             layer = MultiKernelConvLayer(in_channels, out_channels, kernels)
             self.encoders.append(layer)
 
-        self.middle = ConvLayer(12 * NUM_C, 13 * NUM_C, kernel=15)
+        self.middle = ConvLayer(12 * NUM_C, 13 * NUM_C, kernel=1)
 
         # Construct decoders
         self.upsample = nn.Upsample(scale_factor=2, mode="linear", align_corners=True)
@@ -35,7 +43,18 @@ class WaveUNet(nn.Module):
         for i in reversed(range(1, NUM_ENCODER_LAYERS + 1)):
             in_channels = (2 * (i + 1) - 1) * NUM_C
             out_channels = i * NUM_C
-            layer = ConvLayer(in_channels, out_channels, kernel=5)
+
+            if i < 3:
+                # Kernel length for 16 to 64 samples
+                kernels = [5, 3, 1]
+            elif i < 6:
+                # Kernel length for 128 to 512 samples
+                kernels = [15, 5, 3]
+            else:
+                # Kernel length for 1024 to 32k samples
+                kernels = [45, 15, 5]
+
+            layer = MultiKernelConvLayer(in_channels, out_channels, kernels)
             self.decoders.append(layer)
 
         # Extra dimension for input
@@ -115,7 +134,7 @@ class MultiKernelConvLayer(nn.Module):
         for kernel in kernels:
             conv = nn.Conv1d(
                 in_channels=in_channels,
-                out_channels=out_channels / 3,
+                out_channels=out_channels // 3,
                 kernel_size=kernel,
                 padding=kernel // 2,  # Same padding
                 bias=True,
