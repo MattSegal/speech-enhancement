@@ -4,7 +4,7 @@ from torch.nn.utils import weight_norm
 
 from src.utils import spectral
 
-NUM_ENCODER_LAYERS = 7
+NUM_ENCODER_LAYERS = 14
 NUM_CHAN = 24  # Factor which determines the number of channels
 NUM_INPUT_CHAN = 1
 
@@ -14,16 +14,16 @@ class SpectralUNet(nn.Module):
         super().__init__()
         # Construct encoders
         self.encoders = nn.ModuleList()
-        layer = ConvLayer(NUM_INPUT_CHAN, NUM_CHAN, kernel=5)
+        layer = ConvLayer(NUM_INPUT_CHAN, NUM_CHAN, kernel=15)
         self.encoders.append(layer)
         for i in range(1, NUM_ENCODER_LAYERS):
             in_channels = i * NUM_CHAN
             out_channels = (i + 1) * NUM_CHAN
-            layer = ConvLayer(in_channels, out_channels, kernel=5)
+            layer = ConvLayer(in_channels, out_channels, kernel=15)
             self.encoders.append(layer)
 
         self.middle = ConvLayer(
-            NUM_ENCODER_LAYERS * NUM_CHAN, (NUM_ENCODER_LAYERS + 1) * NUM_CHAN, kernel=5
+            NUM_ENCODER_LAYERS * NUM_CHAN, (NUM_ENCODER_LAYERS + 1) * NUM_CHAN, kernel=1
         )
 
         # Construct decoders
@@ -47,8 +47,9 @@ class SpectralUNet(nn.Module):
         for idx, encoder in enumerate(self.encoders):
             acts = encoder(acts)
             skip_connections.append(acts)
-            # Decimate activations
-            acts = acts[:, :, ::2, ::2]
+            if idx % 2 == 0:
+                # Decimate activations
+                acts = acts[:, :, ::2, ::2]
 
         # (b, 168, 2, 1)
         acts = self.middle(acts)
@@ -58,7 +59,8 @@ class SpectralUNet(nn.Module):
         skip_connections = list(reversed(skip_connections))
         for idx, decoder in enumerate(self.decoders):
             # Upsample in the time direction by a factor of two, using interpolation
-            acts = self.upsample(acts)
+            if idx % 2 == 1:
+                acts = self.upsample(acts)
 
             # Concatenate upsampled input and skip connection from encoding stage.
             # Perform the concatenation in the feature map dimension.
