@@ -4,7 +4,7 @@ from torch.nn.utils import weight_norm
 
 from src.utils import spectral
 
-NUM_ENCODER_LAYERS = 7
+NUM_ENCODER_LAYERS = 14
 NUM_CHAN = 24  # Factor which determines the number of channels
 NUM_INPUT_CHAN = 1
 
@@ -20,10 +20,6 @@ class SpectralUNet(nn.Module):
             in_channels = i * NUM_CHAN
             out_channels = (i + 1) * NUM_CHAN
             layer = ConvLayer(in_channels, out_channels, kernel=15)
-            layer = nn.Sequential(
-                ConvLayer(in_channels, out_channels, kernel=15),
-                ConvLayer(out_channels, out_channels, kernel=1),
-            )
             self.encoders.append(layer)
 
         self.middle = ConvLayer(
@@ -52,7 +48,8 @@ class SpectralUNet(nn.Module):
             acts = encoder(acts)
             skip_connections.append(acts)
             # Decimate activations
-            acts = acts[:, :, ::2, ::2]
+            if idx % 2 == 0:
+                acts = acts[:, :, ::2, ::2]
 
         # (b, 168, 2, 1)
         acts = self.middle(acts)
@@ -62,7 +59,9 @@ class SpectralUNet(nn.Module):
         skip_connections = list(reversed(skip_connections))
         for idx, decoder in enumerate(self.decoders):
             # Upsample in the time direction by a factor of two, using interpolation
-            acts = self.upsample(acts)
+            if idx % 2 == 0:
+                acts = self.upsample(acts)
+
             # Concatenate upsampled input and skip connection from encoding stage.
             # Perform the concatenation in the feature map dimension.
             skip = skip_connections[idx]
