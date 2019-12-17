@@ -36,7 +36,7 @@ class SpectralUNet(nn.Module):
             self.decoders.append(layer)
 
         self.final_conv = ConvLayer(
-            NUM_CHAN + NUM_INPUT_CHAN, NUM_INPUT_CHAN, kernel=1, nonlinearity=nn.PReLU
+            NUM_CHAN + NUM_INPUT_CHAN, NUM_INPUT_CHAN, kernel=1, nonlinearity=None
         )
 
     def forward(self, input_t):
@@ -80,7 +80,7 @@ class ConvLayer(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel, nonlinearity=nn.PReLU):
         super().__init__()
-        self.nonlinearity = nonlinearity()
+        self.nonlinearity = nonlinearity() if nonlinearity else None
         conv = nn.Conv2d(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -97,4 +97,7 @@ class ConvLayer(nn.Module):
         Compute output tensor from input tensor
         """
         acts = self.conv(input_t)
-        return self.nonlinearity(acts)
+        if self.nonlinearity:
+            return self.nonlinearity(acts)
+        else:
+            return acts
