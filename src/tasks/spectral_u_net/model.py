@@ -4,7 +4,7 @@ from torch.nn.utils import weight_norm
 
 from src.utils import spectral
 
-NUM_ENCODER_LAYERS = 14
+NUM_ENCODER_LAYERS = 7
 NUM_CHAN = 24  # Factor which determines the number of channels
 NUM_INPUT_CHAN = 1
 
