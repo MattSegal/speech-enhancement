@@ -13,17 +13,19 @@ class NoisySpectralSpeechDataset(NoisySpeechDataset):
     Get item by integer index,
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.scaling_factor = 10  # Chosen by eyeballing data
+    def process_sample(self, sample_arr):
+        # Convert audio array to mel spectrum
+        sample_spec = spectral.audio_to_log_mel_spec(sample_arr)
+        # Knock off last time step so we have all dims as powers of 2
+        sample_spec = sample_spec[:, :-1]
+        # Add channel dimension
+        sample_spec = np.expand_dims(sample_spec, axis=0)
+        return torch.tensor(sample_spec)
 
     def __getitem__(self, idx):
         """
-        Returns noisy and clean linear spectrograms, inc. phase info
-        Throw away some time / spectral info to make shaped dims fit into power of 2s.
+        Returns noisy and clean log magnitude spectrograms
         """
-        noisy_spectral = spectral.audio_to_spec(self.noisy_data[idx])
-        noisy_spectral = noisy_spectral[:, :-1, :-1]
-        clean_spectral = spectral.audio_to_spec(self.clean_data[idx])
-        clean_spectral = clean_spectral[:, :-1, :-1]
-        return torch.tensor(noisy_spectral), torch.tensor(clean_spectral)
+        noisy_spectral = self.process_sample(self.noisy_data[idx])
+        clean_spectral = self.process_sample(self.clean_data[idx])
+        return noisy_spectral, clean_spectral

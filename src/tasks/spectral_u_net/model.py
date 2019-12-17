@@ -6,7 +6,7 @@ from src.utils import spectral
 
 NUM_ENCODER_LAYERS = 7
 NUM_CHAN = 24  # Factor which determines the number of channels
-NUM_INPUT_CHAN = 2
+NUM_INPUT_CHAN = 1
 
 
 class SpectralUNet(nn.Module):
@@ -40,11 +40,9 @@ class SpectralUNet(nn.Module):
         )
 
     def forward(self, input_t):
-        pre_t = spectral.preprocess_input_spec(input_t)
-
         # Encoding
-        # (b, 2, 256, 128)
-        acts = pre_t
+        # (b, 1, 256, 128)
+        acts = input_t
         skip_connections = []
         for idx, encoder in enumerate(self.encoders):
             acts = encoder(acts)
@@ -68,11 +66,11 @@ class SpectralUNet(nn.Module):
             acts = decoder(acts)
 
         # (b, 24, 256, 128)
-        acts = torch.cat((acts, pre_t), dim=1)
+        acts = torch.cat((acts, input_t), dim=1)
         # (b, 26, 256, 128)
         mask_t = self.final_conv(acts)
-        # (b, 2, 256, 128)
-        return mask_t
+        # (b, 1, 256, 128)
+        return mask_t * input_t
 
 
 class ConvLayer(nn.Module):

@@ -38,9 +38,9 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
     trainer.register_loss_fn(get_mse_loss)
     trainer.register_metric_fn(get_mse_metric, "Loss")
-    trainer.input_shape = [2, 256, 128]
-    trainer.target_shape = [2, 256, 128]
-    trainer.output_shape = [2, 256, 128]
+    trainer.input_shape = [1, 256, 128]
+    trainer.target_shape = [1, 256, 128]
+    trainer.output_shape = [1, 256, 128]
     net = trainer.load_net(SpectralUNet)
     optimizer = trainer.load_optimizer(
         net, learning_rate=LEARNING_RATE, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY

@@ -1,10 +1,12 @@
 import torch
 import numpy as np
 from scipy import signal
+from librosa.feature import melspectrogram
+from librosa.feature.inverse import mel_to_audio
 
 SAMPLING_RATE = 16000
 HOP_MS = 16
-WIN_MS = 32  # TODO: Try 64ms
+WIN_MS = 64
 
 
 def audio_to_spec(audio_arr, window_ms=WIN_MS, hop_ms=HOP_MS):
@@ -39,27 +41,38 @@ def spec_to_audio(spectral_frames, window_ms=WIN_MS, hop_ms=HOP_MS):
     return audio_arr
 
 
-def preprocess_input_spec(input_t):
-    return normalise(logify(input_t))
-
-
-def logify(arr):
-    log_arr = torch.zeros(arr.shape, device=arr.device)
-    log_arr[arr > 0] = torch.log(arr[arr > 0])
-    log_arr[arr < 0] = -1 * torch.log(-1 * arr[arr < 0])
-    return log_arr
-
-
-def normalise(arr):
-    mean = arr.mean()
-    centred_arr = arr - mean
-    arr_max = torch.abs(centred_arr).max()
-    return centred_arr / arr_max
-
-
 def ms_to_steps(ms):
     """
     Turn time in miliseconds into discrete audio time steps 
     """
     return int((1e-3 * ms) * SAMPLING_RATE)
+
+
+def audio_to_log_mel_spec(audio_arr):
+    """
+    Get mel-filtered power spectrogram from audio signal. 
+    """
+    spec = melspectrogram(audio_arr, n_mels=4 * WIN_MS, **LIBROSA_SPEC_KWARGS)
+    return np.log(spec + 1e-10)
+
+
+def log_mel_spec_to_audio(log_spec):
+    """
+    Estimate audio signal from log-mel spectrogram
+    using Griffin-Lim algorithm.
+    """
+    spec = np.exp(log_spec)
+    return mel_to_audio(spec, n_iter=32, **LIBROSA_SPEC_KWARGS)
+
+
+LIBROSA_SPEC_KWARGS = {
+    "sr": SAMPLING_RATE,
+    "n_fft": ms_to_steps(WIN_MS),
+    "hop_length": ms_to_steps(HOP_MS),
+    "win_length": ms_to_steps(WIN_MS),
+    "window": "hann",
+    "center": True,
+    "pad_mode": "reflect",
+    "power": 2.0,
+}
 
