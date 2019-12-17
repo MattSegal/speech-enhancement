@@ -7,8 +7,8 @@ from src.tasks.spectral_u_net.train import train
 
 from tests.utils import DummyNet
 
-INPUT_SHAPE = (1, 2, 256, 128)
-OUTPUT_SHAPE = (1, 2, 256, 128)
+INPUT_SHAPE = (1, 1, 256, 128)
+OUTPUT_SHAPE = (1, 1, 256, 128)
 USE_CUDA = torch.cuda.is_available()
 
 
