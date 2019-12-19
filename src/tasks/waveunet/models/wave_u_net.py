@@ -3,8 +3,8 @@ from torch import nn
 from torch.nn.utils import weight_norm
 
 
-NUM_C = 24  # Factor which determines the number of channels
-NUM_ENCODER_LAYERS = 12
+NUM_CHANNELS = 24  # Factor which determines the number of channels
+NUM_LAYERS = 12
 
 
 class WaveUNet(nn.Module):
@@ -14,55 +14,44 @@ class WaveUNet(nn.Module):
     which builds upon this paper (https://arxiv.org/pdf/1806.03185.pdf)
     """
 
-    def __init__(self):
+    def __init__(self, num_channels=NUM_CHANNELS, num_layers=NUM_LAYERS):
         super().__init__()
+        self.skips_enabled = True
         # Construct encoders
         self.encoders = nn.ModuleList()
-        layer = ConvLayer(1, NUM_C, kernel=15)
+        layer = ConvLayer(1, num_channels, kernel=15)
         self.encoders.append(layer)
-        for i in range(1, NUM_ENCODER_LAYERS):
-            in_channels = i * NUM_C
-            out_channels = (i + 1) * NUM_C
-            layer = MultiDilationConvLayer(in_channels, out_channels, kernel=15)
+        for layer_idx in range(1, num_layers):
+            in_channels = layer_idx * num_channels
+            out_channels = (layer_idx + 1) * num_channels
+            layer = ConvLayer(in_channels, out_channels, kernel=15)
             self.encoders.append(layer)
 
-        self.middle = ConvLayer(12 * NUM_C, 13 * NUM_C, kernel=1)
+        self.middle = ConvLayer(12 * num_channels, 13 * num_channels, kernel=1)
 
         # Construct decoders
         self.upsample = nn.Upsample(scale_factor=2, mode="linear", align_corners=True)
         self.decoders = nn.ModuleList()
-        for i in reversed(range(1, NUM_ENCODER_LAYERS + 1)):
-            in_channels = (2 * (i + 1) - 1) * NUM_C
-            out_channels = i * NUM_C
+        for layer_idx in reversed(range(1, num_layers + 1)):
+            in_channels = (2 * (layer_idx + 1) - 1) * num_channels
+            out_channels = layer_idx * num_channels
             layer = ConvLayer(in_channels, out_channels, kernel=15)
             self.decoders.append(layer)
 
         # Extra dimension for input
-        self.output = ConvLayer(NUM_C + 1, 1, kernel=1, nonlinearity=nn.Tanh)
+        self.output = ConvLayer(num_channels + 1, 1, kernel=1, nonlinearity=nn.Tanh)
 
     def freeze(self):
-        self._set_requires_grad(False)
+        for param in self.parameters():
+            param.requires_grad = False
 
     def unfreeze(self):
-        self._set_requires_grad(True)
-
-    def _set_requires_grad(self, val):
         for param in self.parameters():
-            param.requires_grad = val
+            param.requires_grad = True
 
-        for param in self.middle.parameters():
-            param.requires_grad = val
-
-        for param in self.output.parameters():
-            param.requires_grad = val
-
-        for layer in self.encoders:
-            for param in layer.parameters():
-                param.requires_grad = val
-
-        for layer in self.decoders:
-            for param in layer.parameters():
-                param.requires_grad = val
+    def freeze_encoder(self):
+        for param in self.encoders.parameters():
+            param.requires_grad = False
 
     def forward(self, input_t):
         batch_size = input_t.shape[0]
@@ -73,7 +62,14 @@ class WaveUNet(nn.Module):
         skip_connections = []
         for idx, encoder in enumerate(self.encoders):
             acts = encoder(acts)
-            skip_connections.append(acts)
+            if self.skips_enabled or idx > NUM_LAYERS // 2 or True:
+                # Store skip connections for the decoder phase
+                skip_connections.append(acts)
+            else:
+                # Use zeros instead of skip connections
+                zero_acts = torch.zeros_like(acts).detach()
+                skip_connections.append(zero_acts)
+
             # Decimate activations
             acts = acts[:, :, ::2]
 
@@ -90,6 +86,7 @@ class WaveUNet(nn.Module):
             # Perform the concatenation in the feature map dimension.
             skip = skip_connections[idx]
             acts = torch.cat((acts, skip), dim=1)
+
             acts = decoder(acts)
 
         # (b, 24, 16384)
@@ -98,41 +95,6 @@ class WaveUNet(nn.Module):
         # (batch, 1, 16384) (or 1, 3, 5, etc.)
         output_t = output_t.squeeze(dim=1)
         return output_t
-
-
-class MultiDilationConvLayer(nn.Module):
-    """
-    Multiple convolutions with nonlinear output
-    """
-
-    def __init__(self, in_channels, out_channels, kernel, nonlinearity=nn.PReLU):
-        super().__init__()
-        assert out_channels % 3 == 0, "Out channels must be divisible by 3"
-        self.nonlinearity = nonlinearity()
-        self.convs = nn.ModuleList()
-        for dilation in [1, 2, 3]:
-            conv = nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=out_channels // 3,
-                kernel_size=kernel,
-                padding=dilation * (kernel - 1) // 2,  # Same padding
-                dilation=dilation,
-                bias=True,
-            )
-            conv = weight_norm(conv)
-            nn.init.xavier_uniform_(conv.weight)
-            self.convs.append(conv)
-
-    def forward(self, input_t):
-        """
-        Compute output tensor from input tensor
-        """
-        acts = []
-        for conv in self.convs:
-            acts.append(conv(input_t))
-
-        acts = torch.cat(acts, dim=1)
-        return self.nonlinearity(acts)
 
 
 class ConvLayer(nn.Module):

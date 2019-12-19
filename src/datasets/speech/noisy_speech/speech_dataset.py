@@ -23,6 +23,7 @@ class NoisySpeechDataset(S3BackedDataset):
     MAX_AUDIO_LENGTH = MAX_AUDIO_LENGTH
 
     def __init__(self, train, subsample=None, quiet=True):
+        self.clean_only = False
         self.quiet = quiet
         super().__init__(dataset_name=DATASET_NAME, quiet=quiet)
         dataset_label = "training" if train else "validation"
@@ -70,7 +71,12 @@ class NoisySpeechDataset(S3BackedDataset):
         """
         Get item by integer index,
         """
-        return torch.tensor(self.noisy_data[idx]), torch.tensor(self.clean_data[idx])
+        clean_t = torch.tensor(self.clean_data[idx])
+        noisy_t = torch.tensor(self.noisy_data[idx])
+        if self.clean_only:
+            return clean_t, clean_t
+        else:
+            return noisy_t, clean_t
 
 
 def subsample_chunk(input_arr, chunk_width):

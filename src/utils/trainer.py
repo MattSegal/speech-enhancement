@@ -146,8 +146,8 @@ class Trainer:
 
             log_training_info(training_info, use_wandb=self.use_wandb)
 
-        # Save final model checkpoint
-        if self.checkpoint_name:
-            checkpoint.save(
-                net, self.checkpoint_name, name=self.wandb_name, use_wandb=self.use_wandb
-            )
+        # # Save final model checkpoint
+        # if self.checkpoint_name:
+        #     checkpoint.save(
+        #         net, self.checkpoint_name, name=self.wandb_name, use_wandb=self.use_wandb
+        #     )

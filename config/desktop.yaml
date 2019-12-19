@@ -1,4 +1,4 @@
-task: spectral_unet_train
+task: waveunet_train_mse
 cuda: true
 epochs: 100
 batch_size: 4

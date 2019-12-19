@@ -24,7 +24,7 @@ CHECKPOINT_NAME = "wave-u-net"
 # Training hyperparams
 LEARNING_RATE = 1e-4
 ADAM_BETAS = (0.5, 0.9)
-WEIGHT_DECAY = 1e-4
+WEIGHT_DECAY = 1e-5
 
 mse = nn.MSELoss()
 
@@ -41,7 +41,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
             "Adam Betas": ADAM_BETAS,
             "Learning Rate": LEARNING_RATE,
             "Weight Decay": WEIGHT_DECAY,
-            "Fine Tuning": True,
+            "Fine Tuning": False,
         },
     )
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
@@ -51,18 +51,33 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     trainer.target_shape = [2 ** 15]
     trainer.output_shape = [2 ** 15]
     net = trainer.load_net(WaveUNet)
-    optimizer = trainer.load_optimizer(
-        net, learning_rate=LEARNING_RATE, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
-    )
-    trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
-    # Do a fine tuning run with 1/10th learning rate for 1/3rd epochs.
-    optimizer = trainer.load_optimizer(
-        net,
-        learning_rate=LEARNING_RATE / 10,
-        adam_betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY / 10,
-    )
-    num_epochs = num_epochs // 3
+
+    opt_kwargs = {
+        "adam_betas": ADAM_BETAS,
+        "weight_decay": WEIGHT_DECAY,
+    }
+
+    # Set net to train on clean speech only as an autoencoder
+    net.skips_enabled = False
+    trainer.test_set.clean_only = True
+    trainer.train_set.clean_only = True
+
+    # Fiddle with learning rate because autoencoder is not very good w/o skip conns.
+    optimizer = trainer.load_optimizer(net, learning_rate=1e-4, **opt_kwargs)
+    trainer.train(net, 5, optimizer, train_loader, test_loader)
+
+    optimizer = trainer.load_optimizer(net, learning_rate=1e-5, **opt_kwargs)
+    trainer.train(net, 5, optimizer, train_loader, test_loader)
+
+    optimizer = trainer.load_optimizer(net, learning_rate=1e-6, **opt_kwargs)
+    trainer.train(net, 5, optimizer, train_loader, test_loader)
+
+    # Set net to train on noisy speech
+    optimizer = trainer.load_optimizer(net, learning_rate=LEARNING_RATE, **opt_kwargs,)
+    net.freeze_encoder()
+    net.skips_enabled = True
+    trainer.test_set.clean_only = False
+    trainer.train_set.clean_only = False
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
 
 
