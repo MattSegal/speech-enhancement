@@ -13,7 +13,8 @@ WANDB_PROJECT = "spectral-u-net"
 CHECKPOINT_NAME = "spectral-u-net"
 
 # Training hyperparams
-LEARNING_RATE = 3e-4
+MIN_LR = 2e-4
+MAX_LR = 1e-3
 ADAM_BETAS = (0.9, 0.99)
 WEIGHT_DECAY = 1e-6
 
@@ -30,7 +31,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
             "Batch Size": batch_size,
             "Epochs": num_epochs,
             "Adam Betas": ADAM_BETAS,
-            "Learning Rate": LEARNING_RATE,
+            "Learning Rate": [MIN_LR, MAX_LR],
             "Weight Decay": WEIGHT_DECAY,
             "Fine Tuning": False,
         },
@@ -43,11 +44,15 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     trainer.output_shape = [1, 80, 256]
     net = trainer.load_net(SpectralUNet)
     optimizer = trainer.load_optimizer(
-        net, learning_rate=LEARNING_RATE, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
+        net, learning_rate=MIN_LR, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
+    # Cyclic learning rate every 2 epochs
+    # step_size_up = len(trainer.train_set) // batch_size
+    # trainer.use_cyclic_lr_scheduler(optimizer, step_size_up, MIN_LR, MAX_LR)
 
-    # DEBUG
-    trainer.checkpoint_name = None
+    # One cycle learning rate
+    # steps_per_epoch = len(trainer.train_set) // batch_size
+    # trainer.use_one_cycle_lr_scheduler(optimizer, steps_per_epoch, num_epochs, MAX_LR)
 
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
 

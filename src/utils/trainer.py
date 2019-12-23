@@ -15,6 +15,7 @@ class Trainer:
     def __init__(self, use_cuda, wandb_name):
         # Training
         self.use_cuda = use_cuda
+        self.scheduler = None
         # Checkpointing
         self.checkpoint_epochs = None
         self.checkpoint_name = None
@@ -59,6 +60,30 @@ class Trainer:
             lr=learning_rate,
             betas=adam_betas,
             weight_decay=weight_decay,
+        )
+
+    def use_cyclic_lr_scheduler(self, optimizer, step_size_up, base_lr, max_lr):
+        """
+        Use cyclic learning rate scheduler (CyclicLR).
+        `step_size_up` is the number of training iterations in the increasing half of a cycle.
+        See https://pytorch.org/docs/stable/optim.html
+        """
+        self.scheduler = optim.lr_scheduler.CyclicLR(
+            optimizer,
+            step_size_up=step_size_up,
+            base_lr=base_lr,
+            max_lr=max_lr,
+            cycle_momentum=False,
+        )
+
+    def use_one_cycle_lr_scheduler(self, optimizer, steps_per_epoch, epochs, max_lr):
+        """
+        Use "one cycle" learning rate scheduler (OneCycleLR).
+        `steps_per_epoch` is the number of training iterations in the increasing half of a cycle.
+        See https://pytorch.org/docs/stable/optim.html
+        """
+        self.scheduler = optim.lr_scheduler.OneCycleLR(
+            optimizer, epochs=epochs, steps_per_epoch=steps_per_epoch, max_lr=max_lr,
         )
 
     def register_loss_fn(self, fn, weight=1):
@@ -119,6 +144,9 @@ class Trainer:
                 # Calculate model weight gradients from the loss and update model.
                 loss.backward()
                 optimizer.step()
+                if self.scheduler:
+                    # Update the learning rate, according to the scheduler.
+                    self.scheduler.step()
 
                 # Track metric information
                 with torch.no_grad():
@@ -144,10 +172,13 @@ class Trainer:
                 training_info[f"Training {name}"] = train_tracker.value
                 training_info[f"Validation {name}"] = test_tracker.value
 
+            if self.scheduler:
+                training_info[f"Learning rate"] = self.scheduler.get_lr()[0]
+
             log_training_info(training_info, use_wandb=self.use_wandb)
 
-        # # Save final model checkpoint
-        # if self.checkpoint_name:
-        #     checkpoint.save(
-        #         net, self.checkpoint_name, name=self.wandb_name, use_wandb=self.use_wandb
-        #     )
+        # Save final model checkpoint
+        if self.checkpoint_name:
+            checkpoint.save(
+                net, self.checkpoint_name, name=self.wandb_name, use_wandb=self.use_wandb
+            )
