@@ -47,8 +47,8 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
         net, learning_rate=MIN_LR, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
     # Cyclic learning rate every 2 epochs
-    # step_size_up = len(trainer.train_set) // batch_size
-    # trainer.use_cyclic_lr_scheduler(optimizer, step_size_up, MIN_LR, MAX_LR)
+    step_size_up = len(trainer.train_set) // batch_size
+    trainer.use_cyclic_lr_scheduler(optimizer, step_size_up, MIN_LR, MAX_LR)
 
     # One cycle learning rate
     # steps_per_epoch = len(trainer.train_set) // batch_size
