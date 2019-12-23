@@ -5,7 +5,7 @@ from src.utils import spectral
 
 from .speech_dataset import NoisySpeechDataset
 
-MAX_AUDIO_LENGTH = 2 ** 16  # ~4s of data at 16kHz
+MAX_AUDIO_LENGTH = 47360  # ~3s of data at 16kHz
 
 
 class NoisySpectralSpeechDataset(NoisySpeechDataset):
@@ -13,11 +13,12 @@ class NoisySpectralSpeechDataset(NoisySpeechDataset):
     Get item by integer index,
     """
 
+    MAX_AUDIO_LENGTH = MAX_AUDIO_LENGTH
+
     def process_sample(self, sample_arr):
         # Convert audio array to mel spectrum
-        sample_spec = spectral.audio_to_log_mel_spec(sample_arr)
-        # Knock off last time step so we have all dims as powers of 2
-        sample_spec = sample_spec[:, :-1]
+        sample_spec = spectral.audio_to_waveglow_spec(sample_arr)
+        assert sample_spec.shape == (80, 256)
         # Add channel dimension
         sample_spec = np.expand_dims(sample_spec, axis=0)
         return torch.tensor(sample_spec)

@@ -9,8 +9,8 @@ def _cuda_maybe(torchy):
     return torchy.cuda() if USE_CUDA else torchy.cpu()
 
 
-def _get_net(*args, **kwagrs):
-    return _cuda_maybe(WaveUNet(*args, **kwagrs))
+def _get_net(*args, **kwargs):
+    return _cuda_maybe(WaveUNet(*args, **kwargs))
 
 
 def _get_noise(shape):

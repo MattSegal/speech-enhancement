@@ -53,7 +53,7 @@ def audio_to_log_mel_spec(audio_arr):
     Get mel-filtered power spectrogram from audio signal. 
     """
     spec = melspectrogram(audio_arr, n_mels=4 * WIN_MS, **LIBROSA_SPEC_KWARGS)
-    return np.log(spec + 1e-10)
+    return np.log(clamp(spec, 1e-10))
 
 
 def log_mel_spec_to_audio(log_spec):
@@ -63,6 +63,43 @@ def log_mel_spec_to_audio(log_spec):
     """
     spec = np.exp(log_spec)
     return mel_to_audio(spec, n_iter=32, **LIBROSA_SPEC_KWARGS)
+
+
+def clamp(arr, floor):
+    """
+    Clamps all elements in arr to be larger or equal floor.
+    """
+    arr[arr < floor] = floor
+    return arr
+
+
+def audio_to_waveglow_spec(audio_arr):
+    """
+    Convert audio to log-magnitude mel-spectrogram compatible with WaveGlow vocoder.
+    """
+    mel_spec = melspectrogram(audio_arr, **WAVEGLOW_SPEC_KWARGS)
+    return np.log(clamp(mel_spec, 1e-10))
+
+
+def waveglow_spec_to_audio(spec_t, waveglow):
+    assert len(spec_t.shape) == 3, "Incorrect shape"
+    assert spec_t.shape[0] == 1, "Only one sample at a time"
+    assert spec_t.shape[1] == WAVEGLOW_BINS, "Incorrect number of bins"
+    with torch.no_grad():
+        audio_t = waveglow.infer(spec_t)
+
+    return audio_t[0].data.cpu().numpy()
+
+
+def load_waveglow(use_cuda=False):
+    """
+    Load WaveGlow vocoder model
+    https://github.com/NVIDIA/waveglow
+    """
+    waveglow = torch.hub.load(WAVEGLOW_GITHUB, WAVEGLOW_MODEL_NAME)
+    waveglow = waveglow.remove_weightnorm(waveglow)
+    waveglow = waveglow.cuda() if use_cuda else waveglow.cpu()
+    return waveglow.eval()
 
 
 LIBROSA_SPEC_KWARGS = {
@@ -76,3 +113,23 @@ LIBROSA_SPEC_KWARGS = {
     "power": 2.0,
 }
 
+# Setup FFT to be compatible with the NVIDIA WaveGlow vocoder implementation.
+# https://github.com/NVIDIA/waveglow
+WAVEGLOW_GITHUB = "nvidia/DeepLearningExamples:torchhub"
+WAVEGLOW_MODEL_NAME = "nvidia_waveglow"
+WAVEGLOW_BINS = 80
+WAVEGLOW_N_FFT = 1024  # timesteps
+WAVEGLOW_HOP = 256  # timesteps
+WAVEGLOW_WINDOW = 1024  # timesteps
+WAVEGLOW_SAMPLING_RATE = 22050
+WAVEGLOW_SPEC_KWARGS = {
+    "sr": SAMPLING_RATE,
+    "n_mels": WAVEGLOW_BINS,
+    "n_fft": WAVEGLOW_N_FFT * SAMPLING_RATE // WAVEGLOW_SAMPLING_RATE,
+    "hop_length": WAVEGLOW_HOP * SAMPLING_RATE // WAVEGLOW_SAMPLING_RATE,
+    "win_length": WAVEGLOW_WINDOW * SAMPLING_RATE // WAVEGLOW_SAMPLING_RATE,
+    "window": "hann",
+    "center": True,
+    "pad_mode": "reflect",
+    "power": 1,
+}

@@ -32,28 +32,23 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
             "Adam Betas": ADAM_BETAS,
             "Learning Rate": LEARNING_RATE,
             "Weight Decay": WEIGHT_DECAY,
-            "Fine Tuning": True,
+            "Fine Tuning": False,
         },
     )
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
     trainer.register_loss_fn(get_mse_loss)
     trainer.register_metric_fn(get_mse_metric, "Loss")
-    trainer.input_shape = [1, 256, 128]
-    trainer.target_shape = [1, 256, 128]
-    trainer.output_shape = [1, 256, 128]
+    trainer.input_shape = [1, 80, 256]
+    trainer.target_shape = [1, 80, 256]
+    trainer.output_shape = [1, 80, 256]
     net = trainer.load_net(SpectralUNet)
     optimizer = trainer.load_optimizer(
         net, learning_rate=LEARNING_RATE, adam_betas=ADAM_BETAS, weight_decay=WEIGHT_DECAY
     )
-    trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
-    # Do a fine tuning run with 1/10th learning rate for 1/3rd epochs.
-    optimizer = trainer.load_optimizer(
-        net,
-        learning_rate=LEARNING_RATE / 10,
-        adam_betas=ADAM_BETAS,
-        weight_decay=WEIGHT_DECAY / 10,
-    )
-    num_epochs = num_epochs // 3
+
+    # DEBUG
+    trainer.checkpoint_name = None
+
     trainer.train(net, num_epochs, optimizer, train_loader, test_loader)
 
 
