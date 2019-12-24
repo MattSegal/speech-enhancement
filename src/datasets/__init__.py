@@ -1,6 +1,7 @@
 # Scenes datasets
 from .scenes.chime.chime_dataset import ChimeDataset
 from .scenes.tut_acoustic_scenes.scene_dataset import SceneDataset
+from .scenes.tut_acoustic_scenes.scene_dataset_spectral import SpectralSceneDataset
 
 # Speech datasets
 from .speech.noisy_speech.speech_dataset import NoisySpeechDataset

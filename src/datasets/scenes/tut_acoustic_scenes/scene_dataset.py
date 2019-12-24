@@ -12,7 +12,6 @@ from src.datasets.s3dataset import S3BackedDataset
 DATASET_NAME = "scenes"
 DATA_PATH = "data/"
 CHUNK_SIZE = 32767
-SUB_SAMPLE = False
 CLASS_LABELS = [
     "bus",
     "car",
@@ -44,6 +43,7 @@ class SceneDataset(S3BackedDataset):
     """
 
     labels = CLASS_LABELS
+    CHUNK_SIZE = CHUNK_SIZE
 
     def __init__(self, train, subsample=None, quiet=True):
         """
@@ -78,7 +78,9 @@ class SceneDataset(S3BackedDataset):
         print("Loading data...")
         self.data = []
         self.data_labels = []
-        wav_files = [filename for filename in os.listdir(data_folder) if filename.endswith(".wav")]
+        wav_files = [
+            filename for filename in os.listdir(data_folder) if filename.endswith(".wav")
+        ]
 
         if subsample:
             wav_files = wav_files[:subsample]
@@ -99,15 +101,11 @@ class SceneDataset(S3BackedDataset):
             # Split each file up into non-overlapping chunks
             for wav_arr in mono_wav_arrs:
                 # Add each audio segment to the dataset
-                chunks = split_even_chunks(wav_arr)
+                chunks = split_even_chunks(wav_arr, self.CHUNK_SIZE)
                 for chunk in chunks:
-                    # normalized_chunk = normalize_audio(chunk)
-                    self.data.append(chunk)
+                    chunk_contiguous = np.asfortranarray(chunk)
+                    self.data.append(chunk_contiguous)
                     self.data_labels.append(label_idx)
-
-        if SUB_SAMPLE:
-            self.data = self.data[:SUB_SAMPLE]
-            self.data_labels = self.data_labels[:SUB_SAMPLE]
 
         assert len(self.data) == len(self.data_labels)
         print(f"Done loading dataset into memory: loaded {len(self.data)} items.\n")
@@ -130,15 +128,15 @@ class SceneDataset(S3BackedDataset):
         return torch.tensor(input_arr), label_idx
 
 
-def split_even_chunks(input_arr):
+def split_even_chunks(input_arr, chunk_size):
     """
     Split the audio sample into multiple even chunks,
     with a random offset.
     """
-    even_length = len(input_arr) - len(input_arr) % CHUNK_SIZE
+    even_length = len(input_arr) - len(input_arr) % chunk_size
     remainder_length = len(input_arr) - even_length
     offset = np.random.randint(0, remainder_length + 1)
-    num_chunks = even_length / CHUNK_SIZE
+    num_chunks = even_length / chunk_size
     start = offset
     end = offset + even_length
     chunks = np.split(input_arr[start:end], num_chunks)

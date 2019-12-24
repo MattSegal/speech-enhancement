@@ -113,7 +113,7 @@ class ConvLayer(nn.Module):
             bias=True,
         )
         self.conv = weight_norm(conv)
-        # Apply Kaiming initialization to convolutional weights
+        # Apply Xavier initialization to convolutional weights
         nn.init.xavier_uniform_(self.conv.weight)
 
     def forward(self, input_t):
