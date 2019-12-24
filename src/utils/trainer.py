@@ -146,7 +146,10 @@ class Trainer:
                 optimizer.step()
                 if self.scheduler:
                     # Update the learning rate, according to the scheduler.
-                    self.scheduler.step()
+                    try:
+                        self.scheduler.step()
+                    except ValueError:
+                        pass # Whatevs
 
                 # Track metric information
                 with torch.no_grad():
