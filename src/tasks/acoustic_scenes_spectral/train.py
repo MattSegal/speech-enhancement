@@ -43,6 +43,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)
     trainer.register_loss_fn(get_ce_loss)
     trainer.register_metric_fn(get_ce_metric, "Loss")
+    trainer.register_metric_fn(get_accuracy_metric, "Accuracy")
     trainer.input_shape = [1, 80, 256]
     trainer.output_shape = [15]
     net = trainer.load_net(SpectralSceneNet)
@@ -64,3 +65,10 @@ def get_ce_loss(inputs, outputs, targets):
 def get_ce_metric(inputs, outputs, targets):
     ce_t = cross_entropy_loss(outputs, targets)
     return ce_t.data.item()
+
+
+def get_accuracy_metric(inputs, outputs, targets):
+    predictions = outputs.argmax(dim=1)
+    num_correct = (predictions == targets).sum().data.item()
+    num_total = len(targets)
+    return num_correct / num_total
