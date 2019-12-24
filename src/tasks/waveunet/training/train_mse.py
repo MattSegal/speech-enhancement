@@ -74,7 +74,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
 
     # Set net to train on noisy speech
     optimizer = trainer.load_optimizer(net, learning_rate=LEARNING_RATE, **opt_kwargs,)
-    net.freeze_encoder()
+    # net.freeze_encoder()
     net.skips_enabled = True
     trainer.test_set.clean_only = False
     trainer.train_set.clean_only = False

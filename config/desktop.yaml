@@ -1,6 +1,6 @@
-task: spectral_unet_train
+task: scene_net_spectral_train
 cuda: true
-epochs: 100
-batch_size: 4
-subsample: 32
+epochs: 20
+batch_size: 1
+subsample: 1
 checkpoint_epochs: null
