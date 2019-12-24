@@ -19,7 +19,7 @@ CHECKPOINT_NAME = "spectral-scene-net"
 MIN_LR = 1e-4
 MAX_LR = 4e-4
 ADAM_BETAS = (0.9, 0.99)
-WEIGHT_DECAY = 1e-6
+WEIGHT_DECAY = 1e-4
 
 
 cross_entropy_loss = nn.CrossEntropyLoss()
