@@ -11,6 +11,7 @@ from src.datasets.s3dataset import S3BackedDataset
 
 DATASET_NAME = "scenes"
 DATA_PATH = "data/"
+SAMPLING_RATE = 16000
 CHUNK_SIZE = 32767
 CLASS_LABELS = [
     "bus",
@@ -92,7 +93,7 @@ class SceneDataset(S3BackedDataset):
             # Read the audio file into memory
             path = os.path.join(data_folder, filename)
             sample_rate, wav_arr = wavfile.read(path)
-            assert sample_rate == 16000
+            assert sample_rate == SAMPLING_RATE
             # The audio files are stereo: split them into two mono files.
             assert len(wav_arr.shape) == 2, "Audio data should be stereo"
             wav_arr = wav_arr.transpose()

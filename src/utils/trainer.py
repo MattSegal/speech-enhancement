@@ -146,10 +146,7 @@ class Trainer:
                 optimizer.step()
                 if self.scheduler:
                     # Update the learning rate, according to the scheduler.
-                    try:
-                        self.scheduler.step()
-                    except ValueError:
-                        pass # Whatevs
+                    self.scheduler.step()
 
                 # Track metric information
                 with torch.no_grad():
@@ -176,7 +173,10 @@ class Trainer:
                 training_info[f"Validation {name}"] = test_tracker.value
 
             if self.scheduler:
-                training_info[f"Learning rate"] = self.scheduler.get_lr()[0]
+                try:
+                    training_info[f"Learning rate"] = self.scheduler.get_lr()[0]
+                except ValueError:
+                    pass  # Whatevs
 
             log_training_info(training_info, use_wandb=self.use_wandb)
 

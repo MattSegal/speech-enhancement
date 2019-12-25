@@ -55,13 +55,15 @@ popd
 
 echo -e "\nResampling downloaded data...\n"
 DATASETS="scenes_training_set scenes_validation_set"
+SAMPLING_RATE=16000
+# SAMPLING_RATE=22050
 pushd data/
 for dataset in $DATASETS; do
     echo "Processing $dataset ..."
     mkdir -p "$dataset"
     pushd "inflated/$dataset"
     for file in *.wav; do
-        sox "$file" -e float -b 32 "../../${dataset}/${file}" rate -v -I 16000
+        sox "$file" -e float -b 32 "../../${dataset}/${file}" rate -v -I $SAMPLING_RATE
     done
     cp "meta.txt" "../../${dataset}/meta.txt"
     popd
