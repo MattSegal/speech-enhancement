@@ -37,7 +37,7 @@ def train(num_epochs, use_cuda, batch_size, wandb_name, subsample, checkpoint_ep
             "Adam Betas": ADAM_BETAS,
             "Learning Rate": [MIN_LR, MAX_LR],
             "Weight Decay": WEIGHT_DECAY,
-            "Fine Tuning": True,
+            "Fine Tuning": False,
         },
     )
     train_loader, test_loader = trainer.load_data_loaders(Dataset, batch_size, subsample)

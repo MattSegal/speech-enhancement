@@ -23,6 +23,7 @@ class Trainer:
         self.loss_fns = []
         self.metric_fns = []
         # Weight and Bias Logging
+        self.wandb_name = wandb_name
         self.use_wandb = False
         # Shape assert
         self.input_shape = []
@@ -33,6 +34,7 @@ class Trainer:
         return net_class(**kwargs).cuda() if self.use_cuda else net_class(**kwargs).cpu()
 
     def setup_wandb(self, wandb_project, wandb_name, config={}):
+        # FIXME: wandb_name is set in two places, which doesn't make sense.
         print("Using training config:")
         pprint.pprint(config)
         self.wandb_name = wandb_name
@@ -146,7 +148,10 @@ class Trainer:
                 optimizer.step()
                 if self.scheduler:
                     # Update the learning rate, according to the scheduler.
-                    self.scheduler.step()
+                    try:
+                        self.scheduler.step()
+                    except ValueError:
+                        pass
 
                 # Track metric information
                 with torch.no_grad():

@@ -122,17 +122,6 @@ WAVEGLOW_N_FFT = 1024  # timesteps
 WAVEGLOW_HOP = 256  # timesteps
 WAVEGLOW_WINDOW = 1024  # timesteps
 WAVEGLOW_SAMPLING_RATE = 22050
-# WAVEGLOW_SPEC_KWARGS = {
-#     "sr": WAVEGLOW_SAMPLING_RATE,
-#     "n_mels": WAVEGLOW_BINS,
-#     "n_fft": WAVEGLOW_N_FFT,
-#     "hop_length": WAVEGLOW_HOP,
-#     "win_length": WAVEGLOW_WINDOW,
-#     "window": "hann",
-#     "center": True,
-#     "pad_mode": "reflect",
-#     "power": 1,
-# }
 WAVEGLOW_SPEC_KWARGS = {
     "sr": SAMPLING_RATE,
     "n_mels": WAVEGLOW_BINS,

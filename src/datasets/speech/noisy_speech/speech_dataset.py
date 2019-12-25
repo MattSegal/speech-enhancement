@@ -21,6 +21,7 @@ class NoisySpeechDataset(S3BackedDataset):
     """
 
     MAX_AUDIO_LENGTH = MAX_AUDIO_LENGTH
+    SAMPLING_RATE = 16000
 
     def __init__(self, train, subsample=None, quiet=True):
         self.clean_only = False

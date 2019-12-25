@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from torch.utils.data import Dataset
 
 
 class DummyNet(torch.nn.Module):
@@ -14,3 +15,15 @@ class DummyNet(torch.nn.Module):
         assert input_t.shape == self.input_shape
         t = torch.Tensor(np.random.random(self.output_shape))
         return t.cuda() if self.use_cuda else t.cpu()
+
+
+class DummyDataset(Dataset):
+    def __init__(self, build_output, length, train, subsample):
+        self.build_output = build_output
+        self.length = length
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        return self.build_output()

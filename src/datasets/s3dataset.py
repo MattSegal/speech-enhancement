@@ -8,6 +8,8 @@ from src.utils import s3
 
 
 class S3BackedDataset(Dataset):
+    SAMPLING_RATE = 16000
+
     def __init__(self, dataset_name, quiet=True):
         self.dataset_name = dataset_name
         self.data_path = os.path.join("data", self.dataset_name)
@@ -51,7 +53,7 @@ class S3BackedDataset(Dataset):
             path = os.path.join(folder, filename)
             sample_rate, wav_arr = wavfile.read(path)
             assert len(wav_arr.shape) == 1
-            assert sample_rate == 16000
+            assert sample_rate == self.SAMPLING_RATE
             data.append(wav_arr)
 
     def __len__(self):
