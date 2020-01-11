@@ -41,8 +41,9 @@ tasks:
         project_name: spectral-u-net
     envs:
       aws:
-        checkpoint:
-          save_name: spectral-u-net
+        logging:
+          checkpoint:
+            save_name: spectral-u-net
         training:
           epochs: 6
           batch_size: 128
