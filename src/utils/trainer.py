@@ -12,19 +12,23 @@ from src.utils.log import log_training_info
 
 
 class Trainer:
-    def __init__(self, use_cuda, wandb_name):
-        # Training
-        self.use_cuda = use_cuda
+    def __init__(self, cuda):
+        # Training / runtime
+        self.use_cuda = cuda
         self.scheduler = None
+
         # Checkpointing
         self.checkpoint_epochs = None
         self.checkpoint_name = None
+
         # Loss and metric tracking
         self.loss_fns = []
         self.metric_fns = []
+
         # Weight and Bias Logging
-        self.wandb_name = wandb_name
+        self.wandb_name = None
         self.use_wandb = False
+
         # Shape assert
         self.input_shape = []
         self.target_shape = []
@@ -33,18 +37,17 @@ class Trainer:
     def load_net(self, net_class, **kwargs):
         return net_class(**kwargs).cuda() if self.use_cuda else net_class(**kwargs).cpu()
 
-    def setup_wandb(self, wandb_project, wandb_name, config={}):
-        # FIXME: wandb_name is set in two places, which doesn't make sense.
+    def setup_wandb(self, run_info, project_name, run_name):
         print("Using training config:")
-        pprint.pprint(config)
-        self.wandb_name = wandb_name
-        self.use_wandb = bool(wandb_name)
+        pprint.pprint(run_info)
+        self.wandb_name = run_name
+        self.use_wandb = bool(run_name)
         if self.use_wandb:
-            wandb.init(name=self.wandb_name, project=wandb_project, config=config)
+            wandb.init(name=run_name, project=project_name, config=run_info)
 
-    def setup_checkpoints(self, checkpoint_name, checkpoint_epochs):
-        self.checkpoint_name = checkpoint_name
-        self.checkpoint_epochs = checkpoint_epochs
+    def setup_checkpoints(self, save_name, save_epochs):
+        self.checkpoint_name = save_name
+        self.checkpoint_epochs = save_epochs
 
     def load_data_loaders(self, dataset, batch_size, subsample, **kwargs):
         self.train_set = dataset(train=True, subsample=subsample, **kwargs)

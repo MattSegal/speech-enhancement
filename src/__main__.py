@@ -1,19 +1,53 @@
 import os
 import yaml
+from pprint import pprint
 
 import click
 from cerberus import Validator
 
-from src import tasks
+from src.tasks.tasks import TASKS
 
-ENV_CHOICES = [f.split(".")[0] for f in os.listdir("config")]
+ENV_CHOICES = ("aws", "desktop", "laptop")
 CONFIG_SCHEMA = {
-    "task": {"type": "string", "required": True, "nullable": False},
-    "cuda": {"type": "boolean", "required": True, "nullable": False},
-    "epochs": {"type": "integer", "required": True, "nullable": False},
-    "batch_size": {"type": "integer", "required": True, "nullable": False},
-    "subsample": {"type": "integer", "required": True, "nullable": True},
-    "checkpoint_epochs": {"type": "integer", "required": True, "nullable": True},
+    "runtime": {
+        "type": "dict",
+        "schema": {"cuda": {"type": "boolean", "required": True, "nullable": False},},
+    },
+    "logging": {
+        "type": "dict",
+        "schema": {
+            "wandb": {
+                "type": "dict",
+                "schema": {
+                    "run_name": {"type": "string", "required": True, "nullable": True},
+                    "project_name": {
+                        "type": "string",
+                        "required": True,
+                        "nullable": True,
+                    },
+                },
+            },
+            "checkpoint": {
+                "type": "dict",
+                "schema": {
+                    "save_name": {"type": "string", "required": True, "nullable": True},
+                    "save_epochs": {
+                        "type": "integer",
+                        "required": True,
+                        "nullable": True,
+                    },
+                },
+            },
+        },
+    },
+    "training": {
+        "type": "dict",
+        "schema": {
+            "epochs": {"type": "integer", "required": True, "nullable": False},
+            "batch_size": {"type": "integer", "required": True, "nullable": False},
+            "subsample": {"type": "integer", "required": True, "nullable": True},
+        },
+    },
 }
 validator = Validator(CONFIG_SCHEMA)
 
@@ -26,26 +60,54 @@ def train_cli(env, branch):
     Run model training
     """
     print(f"Running training job using {env} config.")
-    with open(f"config/{env}.yaml", "r") as f:
-        config = yaml.load(f)
+    with open(f"config.yaml", "r") as f:
+        configs = yaml.load(f)
 
+    task_name = configs["task"]
+    train_func = TASKS[task_name]
+
+    # Read default config, merge in default env settings.
+    config = configs["default"]
+    env_config = config["envs"][env]
+    del config["envs"]
+    config = merge_dicts(env_config, config)
+
+    # Read task config, merge in default task env settings.
+    task_config = configs["tasks"][task_name]
+    task_env_config = task_config["envs"][env]
+    del task_config["envs"]
+    task_config = merge_dicts(task_env_config, task_config)
+
+    # Merge task config into default config
+    config = merge_dicts(task_config, config)
+
+    # Finally, read W&B task name from git branch
+    config["logging"]["wandb"]["run_name"] = None
+    if branch.startswith("train/"):
+        wandb_name = branch.replace("train/", "")
+        config["logging"]["wandb"]["run_name"] = wandb_name
+
+    print("Found task config:")
+    pprint(config)
     is_valid = validator.validate(config)
     assert is_valid, validator.errors
 
-    wandb_name = None
-    if branch.startswith("train/"):
-        wandb_name = branch.replace("train/", "")
-        print(f'Using W&B name "{wandb_name}"')
-
-    train = getattr(tasks, config["task"])
-    train(
-        num_epochs=config["epochs"],
-        use_cuda=config["cuda"],
-        batch_size=config["batch_size"],
-        wandb_name=wandb_name,
-        subsample=config["subsample"],
-        checkpoint_epochs=config["checkpoint_epochs"],
+    print(f"Running task {task_name}:\n")
+    train_func(
+        runtime=config["runtime"], logging=config["logging"], training=config["training"],
     )
+
+
+def merge_dicts(src, dest):
+    for key, value in src.items():
+        if isinstance(value, dict):
+            # get node or create one
+            node = dest.setdefault(key, {})
+            merge_dicts(value, node)
+        else:
+            dest[key] = value
+
+    return dest
 
 
 train_cli()

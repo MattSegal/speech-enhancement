@@ -1,6 +1,0 @@
-task: scene_net_train
-cuda: false
-epochs: 5
-batch_size: 1
-subsample: 512
-checkpoint_epochs: null

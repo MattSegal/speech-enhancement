@@ -1,0 +1,58 @@
+# Task to run.
+task: spectral_unet_fl
+
+# Default config
+default:
+  runtime:
+    cuda: true
+  logging:
+    # Logging to Weights and Bias dashboard
+    wandb:
+      project_name: null
+    # Saving checkpoint to S3
+    checkpoint:
+      save_name: null
+      save_epochs: null
+  training:
+    epochs: 1
+    batch_size: 1
+    subsample: null
+  # Environment-specific config
+  envs:
+    # Running on AWS webserver
+    aws:
+      runtime:
+        cuda: true
+    # Running on beefy desktop with GPU
+    desktop:
+      runtime:
+        cuda: true
+    # Running on wimpy laptop, no GPU
+    laptop:
+      runtime:
+        cuda: false
+
+# Task-specific config
+tasks:
+  # Spectral U-net with feature loss
+  spectral_unet_fl:
+    logging:
+      wandb:
+        project_name: spectral-u-net
+    envs:
+      aws:
+        checkpoint:
+          save_name: spectral-u-net
+        training:
+          epochs: 6
+          batch_size: 128
+      desktop:
+        training:
+          epochs: 5
+          batch_size: 16
+          subsample: 128
+      laptop:
+        training:
+          epochs: 5
+          batch_size: 1
+          subsample: 512
