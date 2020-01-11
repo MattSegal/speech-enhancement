@@ -10,6 +10,7 @@ CHECKPOINT_DIR = "checkpoints"
 
 
 def load(checkpoint_filename, net=None, use_cuda=True):
+    print(f"Loading model from {checkpoint_filename}")
     checkpoint_path = os.path.join(CHECKPOINT_DIR, checkpoint_filename)
     if not os.path.exists(checkpoint_path):
         s3.download_file(checkpoint_path, checkpoint_path)

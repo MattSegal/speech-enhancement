@@ -59,14 +59,13 @@ def train_cli(env, branch):
     """
     Run model training
     """
-    print(f"Running training job using {env} config.")
     with open(f"config.yaml", "r") as f:
         configs = yaml.load(f)
 
     task_name = configs["task"]
     train_func = TASKS[task_name]
-
     # Read default config, merge in default env settings.
+    print(f"Loading config for env {env}...")
     config = configs["default"]
     env_config = config["envs"][env]
     del config["envs"]
@@ -92,7 +91,7 @@ def train_cli(env, branch):
     is_valid = validator.validate(config)
     assert is_valid, validator.errors
 
-    print(f"Running task {task_name}:\n")
+    print(f"\n==== Running task {task_name} using {env} config =====\n")
     train_func(
         runtime=config["runtime"], logging=config["logging"], training=config["training"],
     )

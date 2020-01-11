@@ -13,6 +13,7 @@ from src.utils.log import log_training_info
 
 class Trainer:
     def __init__(self, cuda):
+        print("Initialising trainer...")
         # Training / runtime
         self.use_cuda = cuda
         self.scheduler = None
@@ -35,21 +36,27 @@ class Trainer:
         self.output_shape = []
 
     def load_net(self, net_class, **kwargs):
+        print(f"Loading net from {net_class}...")
         return net_class(**kwargs).cuda() if self.use_cuda else net_class(**kwargs).cpu()
 
-    def setup_wandb(self, run_info, project_name, run_name):
+    def setup_wandb(self, project_name, run_name, run_info):
         print("Using training config:")
         pprint.pprint(run_info)
         self.wandb_name = run_name
         self.use_wandb = bool(run_name)
         if self.use_wandb:
+            print("Initializing W&B...")
             wandb.init(name=run_name, project=project_name, config=run_info)
+        else:
+            print("Skipping W&B init.")
 
     def setup_checkpoints(self, save_name, save_epochs):
+        print("Setting up model checkpointing")
         self.checkpoint_name = save_name
         self.checkpoint_epochs = save_epochs
 
     def load_data_loaders(self, dataset, batch_size, subsample, **kwargs):
+        print("Setting up datasets...")
         self.train_set = dataset(train=True, subsample=subsample, **kwargs)
         self.test_set = dataset(train=False, subsample=subsample, **kwargs)
         train_loader = self.load_data_loader(self.train_set, batch_size)
@@ -60,6 +67,7 @@ class Trainer:
         return DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=3)
 
     def load_optimizer(self, net, learning_rate, adam_betas, weight_decay):
+        print("Setting up optimizer...")
         return optim.AdamW(
             net.parameters(),
             lr=learning_rate,
@@ -73,6 +81,7 @@ class Trainer:
         `step_size_up` is the number of training iterations in the increasing half of a cycle.
         See https://pytorch.org/docs/stable/optim.html
         """
+        print("Setting up cycling learning rate scheduler...")
         self.scheduler = optim.lr_scheduler.CyclicLR(
             optimizer,
             step_size_up=step_size_up,
@@ -87,6 +96,7 @@ class Trainer:
         `steps_per_epoch` is the number of training iterations in the increasing half of a cycle.
         See https://pytorch.org/docs/stable/optim.html
         """
+        print("Setting up 1-cycle learning rate scheduler...")
         self.scheduler = optim.lr_scheduler.OneCycleLR(
             optimizer, epochs=epochs, steps_per_epoch=steps_per_epoch, max_lr=max_lr,
         )
@@ -100,6 +110,7 @@ class Trainer:
         self.metric_fns.append([fn, name.capitalize(), train_tracker, test_tracker])
 
     def train(self, net, num_epochs, optimizer, train_loader, test_loader):
+        print("Starting training...")
         # Run training for some number of epochs.
         for epoch in range(num_epochs):
             print(f"\nEpoch {epoch + 1} / {num_epochs}\n")

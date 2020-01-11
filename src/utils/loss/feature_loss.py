@@ -36,7 +36,6 @@ class AudioFeatureLoss:
         loss = torch.tensor([0.0], requires_grad=True)
         loss = loss.cuda() if self.use_cuda else loss
         for idx in range(len(pred_feature_layers)):
-
             predicted_feature = pred_feature_layers[idx]
             target_feature = target_feature_layers[idx]
             loss = loss + l1_loss(predicted_feature, target_feature)
