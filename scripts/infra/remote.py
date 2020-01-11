@@ -17,7 +17,7 @@ def ssh_run_job(instance):
     name = instance["name"]
     print(f"Starting SSH session with instance {name}.")
     subprocess.call(
-        f"scp {SSH_ARGS} ./train.sh ubuntu@{ip}:/home/ubuntu/train.sh", shell=True
+        f"scp {SSH_ARGS} ./scripts/train.sh ubuntu@{ip}:/home/ubuntu/train.sh", shell=True
     )
     subprocess.call(
         f"ssh {SSH_ARGS} ubuntu@{ip} 'bash ~/train.sh aws {BRANCH}'", shell=True
