@@ -46,7 +46,7 @@ tasks:
             save_name: spectral-u-net
         training:
           epochs: 6
-          batch_size: 128
+          batch_size: 64
       desktop:
         training:
           epochs: 5
