@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 from dateutil.tz import tzutc
 
@@ -59,6 +60,22 @@ def run_instance(job_id: str, instance_type: str):
         ],
     )
     print("request sent.")
+    instance = find_instance(job_id)
+    instance_id = instance["InstanceId"]
+    print(f"Waiting for server {instance_id} to boot... ", flush=True)
+    instance_ready = False
+    while not instance_ready:
+        time.sleep(20)
+        print(f"\tChecking status of server {instance_id}...")
+        response = client.describe_instance_status(InstanceIds=[instance_id])
+        statuses = response["InstanceStatuses"][0]
+        instance_ready = (
+            statuses["InstanceState"]["Name"] == "running"
+            and statuses["InstanceStatus"]["Status"] == "ok"
+            and statuses["SystemStatus"]["Status"] == "ok"
+        )
+
+    print(f"Server ready to run job {job_id}.")
 
 
 def find_instance(name):

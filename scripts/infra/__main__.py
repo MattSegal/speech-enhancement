@@ -65,9 +65,6 @@ def start(job_id):
         click.echo("Could not run job - no instances available")
         return
 
-    print("Waiting 60s for server to boot... ", end="", flush=True)
-    time.sleep(60)
-    print("done.")
     instance = aws.find_instance(job_id)
     start_time = time.time()
     while time.time() - start_time < 20:
