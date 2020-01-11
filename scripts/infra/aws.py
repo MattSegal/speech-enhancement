@@ -65,14 +65,17 @@ def run_instance(job_id: str, instance_type: str):
     print(f"Waiting for server {instance_id} to boot... ", flush=True)
     instance_ready = False
     while not instance_ready:
-        time.sleep(30)
+        time.sleep(10)
         print(f"\tChecking status of server {instance_id}...")
         response = client.describe_instance_status(InstanceIds=[instance_id])
-        statuses = response["InstanceStatuses"][0]
+        if not response["InstanceStatuses"]:
+            continue
+
+        status = response["InstanceStatuses"][0]
         instance_ready = (
-            statuses["InstanceState"]["Name"] == "running"
-            and statuses["InstanceStatus"]["Status"] == "ok"
-            and statuses["SystemStatus"]["Status"] == "ok"
+            status["InstanceState"]["Name"] == "running"
+            and status["InstanceStatus"]["Status"] == "ok"
+            and status["SystemStatus"]["Status"] == "ok"
         )
 
     print(f"Server ready to run job {job_id}.")
